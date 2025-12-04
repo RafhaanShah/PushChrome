@@ -104,13 +104,45 @@ src/
 
 ---
 
+### Step 4: Create lib/utils.js ✅
+**Completed:** 2024-12-04
+
+**Created:** `src/lib/utils.js`
+
+**Time Formatting**:
+- `formatRelativeTime(timestamp)` → "2m ago", "3h ago", "5d ago", or date
+- `formatTimestamp(timestamp)` → Full locale date string
+
+**HTML Sanitization**:
+- `escapeHtml(str)` → Escapes &, <, >, ", ' characters
+
+**Device Name**:
+- `generateDeviceName()` → Returns "chrome-ext-{random6chars}"
+
+**Text Utilities**:
+- `truncate(str, maxLength, suffix?)` → Truncates with ellipsis
+
+**Priority Helpers**:
+- `PRIORITY_LABELS` / `PRIORITY_CLASSES` → Mappings for -2 to 2
+- `getPriorityLabel(priority)` → "Lowest", "Low", "Normal", "High", "Emergency"
+- `getPriorityClass(priority)` → CSS class for styling
+
+**URL Helpers**:
+- `isValidUrl(str)` → Boolean validation
+
+**DOM Helpers**:
+- `$(selector)` / `$$(selector)` → Query shortcuts
+- `createElement(tag, attributes, children)` → DOM element factory
+
+---
+
 ## Next Steps
 
 | Step | Task | Status |
 |------|------|--------|
 | 2 | Create `lib/storage.js` | ✅ Done |
 | 3 | Create `lib/api.js` | ✅ Done |
-| 4 | Create `lib/utils.js` | 🔲 Pending |
+| 4 | Create `lib/utils.js` | ✅ Done |
 | 5 | Create Login page | 🔲 Pending |
 | 6 | Create Settings page | 🔲 Pending |
 | 7 | Create Message list popup | 🔲 Pending |
