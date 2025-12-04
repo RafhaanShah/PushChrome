@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings - Pushover</title>
+  <link rel="stylesheet" href="../styles/common.css">
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <div class="container settings-container">
+    <header class="header">
+      <button id="back-btn" class="icon-btn" title="Back">←</button>
+      <h1>Settings</h1>
+      <div class="header-spacer"></div>
+    </header>
+
+    <main id="content">
+      <!-- Account Section -->
+      <section class="settings-section">
+        <h2>Account</h2>
+        <div class="account-info">
+          <div class="account-row">
+            <span class="account-label">Device</span>
+            <span id="device-name" class="account-value">-</span>
+          </div>
+          <div class="account-row">
+            <span class="account-label">User ID</span>
+            <span id="user-id" class="account-value">-</span>
+          </div>
+        </div>
+        <button id="logout-btn" class="btn btn-secondary btn-block">
+          Logout
+        </button>
+      </section>
+
+      <!-- Send Message Config Section -->
+      <section class="settings-section">
+        <h2>Send Message Credentials</h2>
+        <p class="section-hint">
+          Required to send messages. Get your API token from 
+          <a href="https://pushover.net/apps/build" target="_blank" rel="noopener">pushover.net/apps</a>
+        </p>
+        
+        <div class="form-group">
+          <label for="api-token">API Token</label>
+          <input 
+            type="text" 
+            id="api-token" 
+            placeholder="Your application API token"
+            maxlength="30"
+          >
+        </div>
+
+        <div id="user-key-group" class="form-group hidden">
+          <label for="user-key">User Key</label>
+          <input 
+            type="text" 
+            id="user-key" 
+            placeholder="Your user key"
+            maxlength="30"
+          >
+        </div>
+
+        <button id="validate-btn" class="btn btn-secondary">
+          <span class="btn-text">Validate Credentials</span>
+          <span class="btn-loading hidden">
+            <span class="spinner"></span>
+          </span>
+        </button>
+        <div id="validate-result" class="validate-result hidden"></div>
+      </section>
+
+      <!-- Preferences Section -->
+      <section class="settings-section">
+        <h2>Preferences</h2>
+
+        <div class="form-group">
+          <label for="refresh-interval">Refresh Interval</label>
+          <select id="refresh-interval">
+            <option value="1">Every 1 minute</option>
+            <option value="5">Every 5 minutes</option>
+            <option value="10">Every 10 minutes</option>
+            <option value="15">Every 15 minutes</option>
+            <option value="30">Every 30 minutes</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="max-messages">Max Messages to Store</label>
+          <select id="max-messages">
+            <option value="10">10 messages</option>
+            <option value="25">25 messages</option>
+            <option value="50">50 messages</option>
+            <option value="100">100 messages</option>
+          </select>
+        </div>
+
+        <div class="form-group toggle-group">
+          <label for="notifications-enabled">
+            <input type="checkbox" id="notifications-enabled">
+            <span>Enable desktop notifications</span>
+          </label>
+        </div>
+
+        <div class="form-group toggle-group">
+          <label for="badge-enabled">
+            <input type="checkbox" id="badge-enabled">
+            <span>Show unread count badge</span>
+          </label>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Sticky Save Button -->
+    <div class="save-section">
+      <button id="save-btn" class="btn btn-primary btn-block">
+        <span class="btn-text">Save Settings</span>
+        <span class="btn-loading hidden">
+          <span class="spinner"></span>
+        </span>
+        <span class="btn-success hidden">✓ Saved!</span>
+      </button>
+    </div>
+  </div>
+
+  <script type="module" src="settings.js"></script>
+</body>
+</html>

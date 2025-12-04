@@ -173,6 +173,42 @@ src/
 
 ---
 
+### Step 6: Create Settings Page ✅
+**Completed:** 2024-12-04
+
+**Created Files:**
+- `src/pages/settings.html` - Settings page layout
+- `src/pages/settings.js` - Settings logic
+- `src/pages/settings.css` - Settings page styles
+
+**Account Section:**
+- Displays device name and user ID (read-only)
+- Logout button with confirmation dialog
+- Clears all storage on logout
+
+**Send Message Credentials:**
+- API Token input (for sending messages)
+- User Key input (auto-filled from login session)
+- Validate button to test credentials via API
+- Shows validation result with device list
+
+**Preferences:**
+- Refresh interval selector (1, 5, 10, 15, 30 min)
+- Max messages to store (10, 25, 50, 100)
+- Desktop notifications toggle
+- Badge icon toggle
+
+**Save Functionality:**
+- Saves all settings to `chrome.storage.sync`
+- Updates Chrome alarm interval on save
+- Shows success/error feedback
+
+**Navigation:**
+- Back button returns to popup
+- Settings button in popup header links to settings
+
+---
+
 ## Next Steps
 
 | Step | Task | Status |
@@ -181,7 +217,7 @@ src/
 | 3 | Create `lib/api.js` | ✅ Done |
 | 4 | Create `lib/utils.js` | ✅ Done |
 | 5 | Create Login page | ✅ Done |
-| 6 | Create Settings page | 🔲 Pending |
+| 6 | Create Settings page | ✅ Done |
 | 7 | Create Message list popup | 🔲 Pending |
 | 8 | Create Send message page | 🔲 Pending |
 | 9 | Create Background worker | 🔲 Pending |
@@ -200,3 +236,7 @@ src/
 ## Deferred Tasks (for Step 11 - Polish)
 
 - [ ] **Icon caching**: Implement Cache API caching for Pushover app icons (`getIconUrl` in api.js) per API guidelines
+- [ ] **Dark mode theme**: System preference detection, settings toggle, CSS custom properties
+- [ ] **Send-only mode**: Allow sending messages without login/device registration (no desktop license needed)
+- [ ] **Device list refresh**: Periodically refresh device list from API, store with timestamp
+- [ ] **Pop-out mode**: Open message list in standalone resizable window

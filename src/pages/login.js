@@ -45,7 +45,7 @@ function init() {
 
 async function checkExistingSession() {
   if (await isLoggedIn()) {
-    redirectToPopup();
+    redirectToSettings();
     return;
   }
   
@@ -183,7 +183,7 @@ async function handleDeviceSubmit() {
     await clearPendingLogin();
     pendingCredentials = null;
     pendingLoginResult = null;
-    redirectToPopup();
+    redirectToSettings();
   } catch (error) {
     const errorMsg = error.message || 'Unknown error';
     if (errorMsg.toLowerCase().includes('already been taken') || errorMsg.toLowerCase().includes('already in use')) {
@@ -262,8 +262,8 @@ function hideError() {
   elements.errorMessage.classList.add('hidden');
 }
 
-function redirectToPopup() {
-  window.location.href = '../popup/popup.html';
+function redirectToSettings() {
+  window.location.href = 'settings.html';
 }
 
 document.addEventListener('DOMContentLoaded', init);

@@ -1,0 +1,155 @@
+/* Settings Page Styles */
+
+.settings-container {
+  max-width: 400px;
+  min-height: 400px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header h1 {
+  flex: 1;
+}
+
+.header-spacer {
+  width: 28px;
+}
+
+/* Settings Sections */
+.settings-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.settings-section:last-of-type {
+  border-bottom: none;
+}
+
+.settings-section h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.section-hint {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.section-hint a {
+  color: #249df1;
+}
+
+/* Account Info */
+.account-info {
+  background: #f8f8f8;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.account-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.account-row + .account-row {
+  border-top: 1px solid #e8e8e8;
+  margin-top: 4px;
+  padding-top: 8px;
+}
+
+.account-label {
+  font-size: 13px;
+  color: #666;
+}
+
+.account-value {
+  font-size: 13px;
+  font-family: monospace;
+  color: #333;
+  word-break: break-all;
+}
+
+/* Toggle Groups */
+.toggle-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: normal;
+}
+
+.toggle-group input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+/* Validate Result */
+.validate-result {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.validate-result.success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.validate-result.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+/* Sticky Save Section */
+.save-section {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  padding: 12px;
+  margin: 0 -12px;
+  border-top: 1px solid #e0e0e0;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+}
+
+#save-btn {
+  width: 100%;
+}
+
+#save-btn.success {
+  background: #22c55e;
+}
+
+#save-btn .btn-success {
+  color: white;
+}
+
+/* Form adjustments */
+.settings-section .form-group {
+  margin-bottom: 12px;
+}
+
+.settings-section .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.settings-section select {
+  background: white;
+}

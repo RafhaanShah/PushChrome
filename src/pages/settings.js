@@ -1,0 +1,206 @@
+// Pushover Chrome Extension - Settings Page
+import { validateCredentials } from '../lib/api.js';
+import { getSession, getSettings, saveSettings, saveDevices, clearAll } from '../lib/storage.js';
+import { $ } from '../lib/utils.js';
+
+let isLoggedIn = false;
+
+const elements = {
+  backBtn: null,
+  deviceName: null,
+  userId: null,
+  logoutBtn: null,
+  apiToken: null,
+  userKey: null,
+  userKeyGroup: null,
+  validateBtn: null,
+  validateResult: null,
+  refreshInterval: null,
+  maxMessages: null,
+  notificationsEnabled: null,
+  badgeEnabled: null,
+  saveBtn: null
+};
+
+async function init() {
+  elements.backBtn = $('#back-btn');
+  elements.deviceName = $('#device-name');
+  elements.userId = $('#user-id');
+  elements.logoutBtn = $('#logout-btn');
+  elements.apiToken = $('#api-token');
+  elements.userKey = $('#user-key');
+  elements.userKeyGroup = $('#user-key-group');
+  elements.validateBtn = $('#validate-btn');
+  elements.validateResult = $('#validate-result');
+  elements.refreshInterval = $('#refresh-interval');
+  elements.maxMessages = $('#max-messages');
+  elements.notificationsEnabled = $('#notifications-enabled');
+  elements.badgeEnabled = $('#badge-enabled');
+  elements.saveBtn = $('#save-btn');
+
+  await loadAccountInfo();
+  await loadSettings();
+  bindEvents();
+}
+
+async function loadAccountInfo() {
+  const session = await getSession();
+  
+  if (session?.userId) {
+    isLoggedIn = true;
+    elements.deviceName.textContent = session.deviceName || '-';
+    elements.userId.textContent = session.userId || '-';
+    elements.userKey.value = session.userId;
+  } else {
+    // Not logged in - show user key field for send-only mode
+    isLoggedIn = false;
+    elements.userKeyGroup.classList.remove('hidden');
+    elements.deviceName.textContent = 'Not logged in';
+    elements.userId.textContent = '-';
+  }
+}
+
+async function loadSettings() {
+  const settings = await getSettings();
+
+  elements.apiToken.value = settings.apiToken || '';
+  elements.userKey.value = settings.userKey || elements.userKey.value || '';
+  elements.refreshInterval.value = String(settings.refreshInterval);
+  elements.maxMessages.value = String(settings.maxMessages);
+  elements.notificationsEnabled.checked = settings.notificationsEnabled;
+  elements.badgeEnabled.checked = settings.badgeEnabled;
+}
+
+function bindEvents() {
+  elements.backBtn.addEventListener('click', handleBack);
+  elements.logoutBtn.addEventListener('click', handleLogout);
+  elements.validateBtn.addEventListener('click', handleValidate);
+  elements.saveBtn.addEventListener('click', handleSave);
+}
+
+function handleBack() {
+  window.location.href = '../popup/popup.html';
+}
+
+async function handleLogout() {
+  if (!confirm('Are you sure you want to logout? Your cached messages will be deleted.')) {
+    return;
+  }
+
+  await clearAll();
+  window.location.href = 'login.html';
+}
+
+async function handleValidate() {
+  const token = elements.apiToken.value.trim();
+  const user = elements.userKey.value.trim();
+
+  if (!token || !user) {
+    showValidateResult('Please enter both API token and user key.', false);
+    return;
+  }
+
+  setLoading(elements.validateBtn, true);
+  hideValidateResult();
+
+  try {
+    const result = await validateCredentials(token, user);
+
+    if (result.valid) {
+      // Save devices for later use in send message
+      if (result.devices.length > 0) {
+        await saveDevices(result.devices);
+      }
+      
+      const deviceList = result.devices.length > 0 
+        ? `Devices: ${result.devices.join(', ')}` 
+        : 'No devices found';
+      showValidateResult(`Valid! ${deviceList}`, true);
+    } else {
+      showValidateResult('Invalid credentials. Please check your API token and user key.', false);
+    }
+  } catch (error) {
+    showValidateResult('Validation failed: ' + (error.message || 'Unknown error'), false);
+  } finally {
+    setLoading(elements.validateBtn, false);
+  }
+}
+
+async function handleSave() {
+  setLoading(elements.saveBtn, true);
+
+  try {
+    const newSettings = {
+      apiToken: elements.apiToken.value.trim(),
+      userKey: elements.userKey.value.trim(),
+      refreshInterval: parseInt(elements.refreshInterval.value, 10),
+      maxMessages: parseInt(elements.maxMessages.value, 10),
+      notificationsEnabled: elements.notificationsEnabled.checked,
+      badgeEnabled: elements.badgeEnabled.checked
+    };
+
+    await saveSettings(newSettings);
+
+    // Update alarm interval if service worker is active
+    try {
+      await chrome.alarms.clear('refreshMessages');
+      if (newSettings.refreshInterval > 0) {
+        await chrome.alarms.create('refreshMessages', {
+          periodInMinutes: newSettings.refreshInterval
+        });
+      }
+    } catch (e) {
+      console.warn('Could not update alarm:', e);
+    }
+
+    showSaveSuccess();
+  } catch (error) {
+    alert('Failed to save settings: ' + (error.message || 'Unknown error'));
+    setLoading(elements.saveBtn, false);
+  }
+}
+
+function setLoading(button, isLoading) {
+  const textEl = button.querySelector('.btn-text');
+  const loadingEl = button.querySelector('.btn-loading');
+
+  if (isLoading) {
+    button.disabled = true;
+    textEl.classList.add('hidden');
+    loadingEl.classList.remove('hidden');
+  } else {
+    button.disabled = false;
+    textEl.classList.remove('hidden');
+    loadingEl.classList.add('hidden');
+  }
+}
+
+function showValidateResult(message, isSuccess) {
+  elements.validateResult.textContent = message;
+  elements.validateResult.className = `validate-result ${isSuccess ? 'success' : 'error'}`;
+  elements.validateResult.classList.remove('hidden');
+}
+
+function hideValidateResult() {
+  elements.validateResult.classList.add('hidden');
+}
+
+function showSaveSuccess() {
+  const textEl = elements.saveBtn.querySelector('.btn-text');
+  const loadingEl = elements.saveBtn.querySelector('.btn-loading');
+  const successEl = elements.saveBtn.querySelector('.btn-success');
+
+  loadingEl.classList.add('hidden');
+  textEl.classList.add('hidden');
+  successEl.classList.remove('hidden');
+  elements.saveBtn.classList.add('success');
+
+  setTimeout(() => {
+    successEl.classList.add('hidden');
+    textEl.classList.remove('hidden');
+    elements.saveBtn.classList.remove('success');
+    elements.saveBtn.disabled = false;
+  }, 2000);
+}
+
+document.addEventListener('DOMContentLoaded', init);

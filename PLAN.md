@@ -622,8 +622,36 @@ zip -r pushover-chrome.zip manifest.json src/ -x "*.DS_Store" -x "*.map"
 - [ ] WebSocket real-time connection (`wss://client.pushover.net/push`)
 - [ ] Message search/filter
 - [ ] Quick reply from notification
-- [ ] Dark mode support
 - [ ] Keyboard shortcuts
 - [ ] Image attachments
 - [ ] Multiple account support
 - [ ] Export message history
+
+---
+
+## Polish Items (Step 11)
+
+### Dark Mode Theme
+- Detect system preference via `prefers-color-scheme`
+- Add toggle in settings to override (System / Light / Dark)
+- CSS custom properties for theme colors
+- Persist preference in `chrome.storage.sync`
+
+### Send-Only Mode (No Login)
+- Allow users to configure API token + user key without logging in
+- Skip device registration, disable message receiving
+- Only show "Send Message" functionality
+- Useful for users who just want to push notifications without the desktop license
+- Settings page accessible directly from popup when not logged in
+
+### Device List Refresh
+- Periodically refresh the user's device list from `/1/users/validate.json`
+- Update stored devices on each refresh (for device dropdown in Send page)
+- Refresh on settings page load if devices are stale (e.g., > 24 hours old)
+- Store last refresh timestamp alongside device list
+
+### Pop-out Mode for Message List
+- Add button to open message list in a standalone window
+- Use `chrome.windows.create()` with popup type
+- Larger, resizable window for easier message browsing
+- Persist window size/position preferences

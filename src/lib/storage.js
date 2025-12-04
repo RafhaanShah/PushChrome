@@ -6,7 +6,8 @@ const STORAGE_KEYS = {
   MESSAGES: 'messages',
   LAST_READ_ID: 'lastReadId',
   SETTINGS: 'settings',
-  PENDING_LOGIN: 'pendingLogin'
+  PENDING_LOGIN: 'pendingLogin',
+  DEVICES: 'devices'
 };
 
 const DEFAULT_SETTINGS = {
@@ -54,6 +55,19 @@ export async function saveSettings(settings) {
   const updated = { ...current, ...settings };
   await chrome.storage.sync.set({ [STORAGE_KEYS.SETTINGS]: updated });
   return updated;
+}
+
+// =============================================================================
+// Device List (chrome.storage.local)
+// =============================================================================
+
+export async function getDevices() {
+  const result = await chrome.storage.local.get(STORAGE_KEYS.DEVICES);
+  return result[STORAGE_KEYS.DEVICES] || [];
+}
+
+export async function saveDevices(devices) {
+  await chrome.storage.local.set({ [STORAGE_KEYS.DEVICES]: devices });
 }
 
 // =============================================================================
