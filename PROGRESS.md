@@ -77,12 +77,39 @@ src/
 
 ---
 
+### Step 3: Create lib/api.js ✅
+**Completed:** 2024-12-04
+
+**Created:** `src/lib/api.js`
+
+**Open Client API** (for receiving messages):
+- `login(email, password, twofa?)` → Returns `{ secret, userId }` or `{ requires2FA: true }`
+- `registerDevice(secret, deviceName)` → Returns deviceId
+- `fetchMessages(secret, deviceId)` → Returns array of messages
+- `deleteMessages(secret, deviceId, highestMessageId)` → Marks messages as read/deleted on server
+- `acknowledgeEmergency(secret, receiptId)` → Acknowledges emergency priority message
+
+**Message API** (for sending messages):
+- `sendMessage({ token, user, message, title?, device?, priority?, url?, urlTitle?, sound? })` → Returns `{ success, request, receipt? }`
+- `validateCredentials(token, user)` → Returns `{ valid, devices[], group }`
+
+**Utility Functions**:
+- `getIconUrl(iconName)` → Returns full URL for app icon
+- `getSoundUrl(soundName)` → Returns full URL for notification sound
+
+**Error Handling**:
+- `PushoverAPIError` class with `status` and `errors` properties
+- Handles HTTP 412 for 2FA requirement
+- All API errors include error messages from Pushover
+
+---
+
 ## Next Steps
 
 | Step | Task | Status |
 |------|------|--------|
 | 2 | Create `lib/storage.js` | ✅ Done |
-| 3 | Create `lib/api.js` | 🔲 Pending |
+| 3 | Create `lib/api.js` | ✅ Done |
 | 4 | Create `lib/utils.js` | 🔲 Pending |
 | 5 | Create Login page | 🔲 Pending |
 | 6 | Create Settings page | 🔲 Pending |
@@ -100,3 +127,7 @@ src/
 - Extension can now be loaded in Chrome via `chrome://extensions/` → "Load unpacked"
 - Icons are currently using a single placeholder image for all sizes
 - Common CSS includes basic button styles, form elements, and utility classes
+
+## Deferred Tasks (for Step 11 - Polish)
+
+- [ ] **Icon caching**: Implement Cache API caching for Pushover app icons (`getIconUrl` in api.js) per API guidelines
