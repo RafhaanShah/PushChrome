@@ -72,8 +72,13 @@ src/
 - `getUnreadCount()` → Returns count of messages newer than last read
 - `markAllRead()` → Marks all current messages as read
 
+**Pending Login State** (chrome.storage.session - browser session only):
+- `getPendingLogin()` → Returns `{ secret, userId }` or null
+- `savePendingLogin(loginResult)` → Stores pending login for device registration
+- `clearPendingLogin()` → Clears pending login state
+
 **Utility**:
-- `clearAll()` → Clears all local storage (for logout)
+- `clearAll()` → Clears all local and session storage (for logout)
 
 ---
 
@@ -147,15 +152,23 @@ src/
 **Features:**
 - Email/password input form
 - Hidden 2FA section (shown when HTTP 412 received)
+- Custom device name input with generated default
 - Loading states on buttons
-- Error message display
-- Auto device registration on successful login
+- Error message display with specific "device already taken" handling
+- Link to pushover.net for device management
+- Direct link to delete device if name is taken
 - Session storage (secret, userId, deviceId, deviceName)
 - Redirect to popup after login
 - Links to signup and desktop license info
 
+**State Persistence:**
+- Uses `chrome.storage.session` to persist pending login (secret/userId) after authentication
+- If user closes popup before device registration, they can resume where they left off
+- Session storage clears when browser closes (temporary, secure)
+
 **Security:**
 - Never stores email/password - only session secret
+- Pending login stored in session storage only (not persisted to disk)
 - Clears pending credentials on back/error
 
 ---

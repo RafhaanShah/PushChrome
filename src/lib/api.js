@@ -12,6 +12,17 @@ class PushoverAPIError extends Error {
   }
 }
 
+function formatErrors(errors) {
+  if (!errors) return 'Unknown error';
+  if (Array.isArray(errors)) return errors.join(', ');
+  if (typeof errors === 'object') {
+    return Object.entries(errors)
+      .map(([field, msgs]) => Array.isArray(msgs) ? msgs.join(', ') : msgs)
+      .join(', ');
+  }
+  return String(errors);
+}
+
 async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
   const response = await fetch(url, {
@@ -26,7 +37,7 @@ async function apiRequest(endpoint, options = {}) {
 
   if (!response.ok && response.status !== 412) {
     throw new PushoverAPIError(
-      data.errors?.join(', ') || 'API request failed',
+      formatErrors(data.errors) || 'API request failed',
       response.status,
       data.errors || []
     );
@@ -63,7 +74,7 @@ export async function login(email, password, twofa = null) {
 
   if (data.status !== 1) {
     throw new PushoverAPIError(
-      data.errors?.join(', ') || 'Login failed',
+      formatErrors(data.errors) || 'Login failed',
       status,
       data.errors || []
     );
@@ -87,7 +98,7 @@ export async function registerDevice(secret, deviceName) {
 
   if (data.status !== 1) {
     throw new PushoverAPIError(
-      data.errors?.join(', ') || 'Device registration failed',
+      formatErrors(data.errors) || 'Device registration failed',
       0,
       data.errors || []
     );
@@ -104,7 +115,7 @@ export async function fetchMessages(secret, deviceId) {
 
   if (data.status !== 1) {
     throw new PushoverAPIError(
-      data.errors?.join(', ') || 'Failed to fetch messages',
+      formatErrors(data.errors) || 'Failed to fetch messages',
       0,
       data.errors || []
     );
@@ -124,7 +135,7 @@ export async function deleteMessages(secret, deviceId, highestMessageId) {
 
   if (data.status !== 1) {
     throw new PushoverAPIError(
-      data.errors?.join(', ') || 'Failed to delete messages',
+      formatErrors(data.errors) || 'Failed to delete messages',
       0,
       data.errors || []
     );
@@ -141,7 +152,7 @@ export async function acknowledgeEmergency(secret, receiptId) {
 
   if (data.status !== 1) {
     throw new PushoverAPIError(
-      data.errors?.join(', ') || 'Failed to acknowledge emergency',
+      formatErrors(data.errors) || 'Failed to acknowledge emergency',
       0,
       data.errors || []
     );
@@ -174,7 +185,7 @@ export async function sendMessage({ token, user, message, title, device, priorit
 
   if (data.status !== 1) {
     throw new PushoverAPIError(
-      data.errors?.join(', ') || 'Failed to send message',
+      formatErrors(data.errors) || 'Failed to send message',
       0,
       data.errors || []
     );

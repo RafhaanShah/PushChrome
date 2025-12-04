@@ -72,7 +72,8 @@
   font-family: monospace;
 }
 
-#back-btn {
+#back-btn,
+#device-back-btn {
   margin-top: 8px;
 }
 
@@ -86,6 +87,16 @@
   font-family: monospace;
 }
 
+.device-manage-hint {
+  font-size: 12px;
+  color: #666;
+  margin-top: 8px;
+}
+
+.device-manage-hint a {
+  color: #249df1;
+}
+
 /* Error Message */
 .login-form .error-message {
   margin-top: 16px;
@@ -94,6 +105,11 @@
   border: 1px solid #fecaca;
   border-radius: 6px;
   text-align: center;
+}
+
+.login-form .error-message a {
+  color: #dc2626;
+  font-weight: 500;
 }
 
 /* Footer */

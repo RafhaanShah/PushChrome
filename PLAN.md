@@ -211,8 +211,10 @@ The Pushover Open Client API requires a multi-step authentication process:
    - Detect HTTP 412 response (2FA required)
    - Show 2FA input when needed
    - Retry login with `twofa` parameter
-   - On success: auto-register device with unique name
-   - Store session (secret, userId, deviceId)
+   - Show device name input (user can customize or use generated name)
+   - **Persist pending login to `chrome.storage.session`** so user can close popup and resume device registration
+   - On success: register device with chosen name
+   - Store session (secret, userId, deviceId, deviceName)
    - Redirect to popup/messages view
    - **Never store email/password** - only the session secret
 
@@ -258,10 +260,11 @@ The Pushover Open Client API requires a multi-step authentication process:
      - User Key input (defaults to logged-in user's key)
      - "Validate" button
    - **Preferences Section**:
-     - Refresh interval selector (1, 5, 10, 15, 30 min)
-     - Notification sound toggle
-     - Max messages to display (10, 25, 50, 100)
-   - "Save Settings" button
+      - Refresh interval selector (1, 5, 10, 15, 30 min)
+      - Notification sound toggle
+      - Badge icon toggle (show/hide unread count on extension icon)
+      - Max messages to store locally (10, 25, 50, 100)
+    - "Save Settings" button
 
 2. **Create `src/pages/settings.js`**
    - Load session info from storage
@@ -290,10 +293,11 @@ The Pushover Open Client API requires a multi-step authentication process:
        "apiToken": "azGDORePK8gMaC0QOYAMyEEuzJnyUi",
        "userKey": "uQiRzpo4DXghDmr9QzzfQu27cmVRsG",
        "refreshInterval": 5,
-       "notificationsEnabled": true,
-       "maxMessages": 50
-     }
-   }
+        "notificationsEnabled": true,
+        "badgeEnabled": true,
+        "maxMessages": 50
+       }
+       }
    ```
 
 ---

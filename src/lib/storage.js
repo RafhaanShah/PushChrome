@@ -5,7 +5,8 @@ const STORAGE_KEYS = {
   SESSION: 'session',
   MESSAGES: 'messages',
   LAST_READ_ID: 'lastReadId',
-  SETTINGS: 'settings'
+  SETTINGS: 'settings',
+  PENDING_LOGIN: 'pendingLogin'
 };
 
 const DEFAULT_SETTINGS = {
@@ -13,6 +14,7 @@ const DEFAULT_SETTINGS = {
   userKey: '',
   refreshInterval: 5,
   notificationsEnabled: true,
+  badgeEnabled: true,
   maxMessages: 50
 };
 
@@ -127,9 +129,28 @@ export async function markAllRead() {
 }
 
 // =============================================================================
+// Pending Login State (chrome.storage.session - browser session only)
+// Used to preserve auth state if user closes popup before completing device registration
+// =============================================================================
+
+export async function getPendingLogin() {
+  const result = await chrome.storage.session.get(STORAGE_KEYS.PENDING_LOGIN);
+  return result[STORAGE_KEYS.PENDING_LOGIN] || null;
+}
+
+export async function savePendingLogin(loginResult) {
+  await chrome.storage.session.set({ [STORAGE_KEYS.PENDING_LOGIN]: loginResult });
+}
+
+export async function clearPendingLogin() {
+  await chrome.storage.session.remove(STORAGE_KEYS.PENDING_LOGIN);
+}
+
+// =============================================================================
 // Full Clear (for logout)
 // =============================================================================
 
 export async function clearAll() {
   await chrome.storage.local.clear();
+  await chrome.storage.session.clear();
 }

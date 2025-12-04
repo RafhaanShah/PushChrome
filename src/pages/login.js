@@ -1,6 +1,6 @@
 // Pushover Chrome Extension - Login Page
 import { login, registerDevice } from '../lib/api.js';
-import { saveSession, isLoggedIn } from '../lib/storage.js';
+import { saveSession, isLoggedIn, getPendingLogin, savePendingLogin, clearPendingLogin } from '../lib/storage.js';
 import { generateDeviceName, $ } from '../lib/utils.js';
 
 const elements = {
@@ -16,6 +16,7 @@ const elements = {
   verifyBtn: null,
   registerBtn: null,
   backBtn: null,
+  deviceBackBtn: null,
   errorMessage: null
 };
 
@@ -35,6 +36,7 @@ function init() {
   elements.verifyBtn = $('#verify-btn');
   elements.registerBtn = $('#register-btn');
   elements.backBtn = $('#back-btn');
+  elements.deviceBackBtn = $('#device-back-btn');
   elements.errorMessage = $('#error-message');
 
   checkExistingSession();
@@ -44,12 +46,21 @@ function init() {
 async function checkExistingSession() {
   if (await isLoggedIn()) {
     redirectToPopup();
+    return;
+  }
+  
+  // Check for pending login (user closed popup after auth but before device registration)
+  const pendingLogin = await getPendingLogin();
+  if (pendingLogin) {
+    pendingLoginResult = pendingLogin;
+    showDeviceSection(pendingLogin);
   }
 }
 
 function bindEvents() {
   elements.form.addEventListener('submit', handleSubmit);
   elements.backBtn.addEventListener('click', handleBack);
+  elements.deviceBackBtn.addEventListener('click', handleBack);
 }
 
 async function handleSubmit(e) {
@@ -86,6 +97,7 @@ async function handleLoginSubmit() {
       pendingCredentials = { email, password };
       showTwofaSection();
     } else {
+      await savePendingLogin(result);
       showDeviceSection(result);
     }
   } catch (error) {
@@ -123,6 +135,7 @@ async function handleTwofaSubmit() {
       elements.twofaInput.value = '';
       elements.twofaInput.focus();
     } else {
+      await savePendingLogin(result);
       showDeviceSection(result);
     }
   } catch (error) {
@@ -167,11 +180,22 @@ async function handleDeviceSubmit() {
       deviceName: deviceName
     });
 
+    await clearPendingLogin();
     pendingCredentials = null;
     pendingLoginResult = null;
     redirectToPopup();
   } catch (error) {
-    showError('Failed to register device: ' + (error.message || 'Unknown error'));
+    const errorMsg = error.message || 'Unknown error';
+    if (errorMsg.toLowerCase().includes('already been taken') || errorMsg.toLowerCase().includes('already in use')) {
+      showErrorHtml(`
+        Device name "<strong>${deviceName}</strong>" is already in use.<br>
+        <a href="https://pushover.net/devices/edit/${encodeURIComponent(deviceName)}" target="_blank" rel="noopener">
+          Delete it on Pushover.net
+        </a> to re-use this name, or choose a different name.
+      `);
+    } else {
+      showError('Failed to register device: ' + errorMsg);
+    }
   } finally {
     setLoading(elements.registerBtn, false);
   }
@@ -194,7 +218,8 @@ function showTwofaSection() {
   elements.twofaInput.focus();
 }
 
-function handleBack() {
+async function handleBack() {
+  await clearPendingLogin();
   pendingCredentials = null;
   pendingLoginResult = null;
   elements.twofaSection.classList.add('hidden');
@@ -224,6 +249,11 @@ function setLoading(button, isLoading) {
 
 function showError(message) {
   elements.errorMessage.textContent = message;
+  elements.errorMessage.classList.remove('hidden');
+}
+
+function showErrorHtml(html) {
+  elements.errorMessage.innerHTML = html;
   elements.errorMessage.classList.remove('hidden');
 }
 
