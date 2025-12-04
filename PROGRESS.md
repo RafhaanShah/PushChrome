@@ -136,6 +136,30 @@ src/
 
 ---
 
+### Step 5: Create Login Page ✅
+**Completed:** 2024-12-04
+
+**Created Files:**
+- `src/pages/login.html` - Login form with 2FA support
+- `src/pages/login.js` - Authentication flow logic
+- `src/pages/login.css` - Login page styles
+
+**Features:**
+- Email/password input form
+- Hidden 2FA section (shown when HTTP 412 received)
+- Loading states on buttons
+- Error message display
+- Auto device registration on successful login
+- Session storage (secret, userId, deviceId, deviceName)
+- Redirect to popup after login
+- Links to signup and desktop license info
+
+**Security:**
+- Never stores email/password - only session secret
+- Clears pending credentials on back/error
+
+---
+
 ## Next Steps
 
 | Step | Task | Status |
@@ -143,7 +167,7 @@ src/
 | 2 | Create `lib/storage.js` | ✅ Done |
 | 3 | Create `lib/api.js` | ✅ Done |
 | 4 | Create `lib/utils.js` | ✅ Done |
-| 5 | Create Login page | 🔲 Pending |
+| 5 | Create Login page | ✅ Done |
 | 6 | Create Settings page | 🔲 Pending |
 | 7 | Create Message list popup | 🔲 Pending |
 | 8 | Create Send message page | 🔲 Pending |

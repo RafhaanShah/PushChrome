@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Pushover</title>
+  <link rel="stylesheet" href="../styles/common.css">
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+  <div class="container login-container">
+    <header class="login-header">
+      <h1>Pushover</h1>
+      <p class="subtitle">Sign in to receive notifications</p>
+    </header>
+
+    <form id="login-form" class="login-form">
+      <!-- Email/Password Section -->
+      <div id="credentials-section">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input 
+            type="email" 
+            id="email" 
+            name="email" 
+            required 
+            autocomplete="email"
+            placeholder="you@example.com"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            required 
+            autocomplete="current-password"
+            placeholder="Your password"
+          >
+        </div>
+
+        <button type="submit" id="login-btn" class="btn btn-primary btn-block">
+          <span class="btn-text">Sign In</span>
+          <span class="btn-loading hidden">
+            <span class="spinner"></span>
+          </span>
+        </button>
+      </div>
+
+      <!-- 2FA Section (hidden by default) -->
+      <div id="twofa-section" class="hidden">
+        <div class="twofa-notice">
+          <p>Two-factor authentication is enabled on your account.</p>
+          <p>Enter the code from your authenticator app.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="twofa-code">Authentication Code</label>
+          <input 
+            type="text" 
+            id="twofa-code" 
+            name="twofa" 
+            inputmode="numeric"
+            pattern="[0-9]*"
+            maxlength="6"
+            autocomplete="one-time-code"
+            placeholder="123456"
+          >
+        </div>
+
+        <button type="submit" id="verify-btn" class="btn btn-primary btn-block">
+          <span class="btn-text">Verify</span>
+          <span class="btn-loading hidden">
+            <span class="spinner"></span>
+          </span>
+        </button>
+
+        <button type="button" id="back-btn" class="btn btn-secondary btn-block">
+          Back
+        </button>
+      </div>
+
+      <!-- Device Registration Section (hidden by default) -->
+      <div id="device-section" class="hidden">
+        <div class="device-notice">
+          <p>Choose a name for this device.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="device-name">Device Name</label>
+          <input 
+            type="text" 
+            id="device-name" 
+            name="device-name" 
+            maxlength="25"
+            pattern="[A-Za-z0-9_-]+"
+            placeholder="chrome-extension"
+          >
+          <p class="form-hint">Letters, numbers, dashes, and underscores only (max 25 chars)</p>
+        </div>
+
+        <button type="submit" id="register-btn" class="btn btn-primary btn-block">
+          <span class="btn-text">Register Device</span>
+          <span class="btn-loading hidden">
+            <span class="spinner"></span>
+          </span>
+        </button>
+      </div>
+
+      <!-- Error Message -->
+      <div id="error-message" class="error-message hidden"></div>
+    </form>
+
+    <footer class="login-footer">
+      <p>
+        Don't have an account? 
+        <a href="https://pushover.net/signup" target="_blank" rel="noopener">Sign up at Pushover.net</a>
+      </p>
+      <p class="license-notice">
+        Requires a <a href="https://pushover.net/clients/desktop" target="_blank" rel="noopener">Pushover Desktop License</a>
+      </p>
+    </footer>
+  </div>
+
+  <script type="module" src="login.js"></script>
+</body>
+</html>
