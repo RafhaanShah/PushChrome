@@ -44,11 +44,44 @@ src/
 
 ---
 
+### Step 2: Create lib/storage.js ✅
+**Completed:** 2024-12-04
+
+**Created:** `src/lib/storage.js`
+
+**Session Storage** (chrome.storage.local - sensitive):
+- `getSession()` → Returns `{ secret, userId, deviceId, deviceName }` or null
+- `saveSession(session)` → Stores session data
+- `clearSession()` → Removes session
+- `isLoggedIn()` → Returns boolean
+
+**Settings Storage** (chrome.storage.sync - synced across devices):
+- `getSettings()` → Returns settings with defaults
+- `saveSettings(settings)` → Merges and saves settings
+- Default settings: `{ apiToken, userKey, refreshInterval: 5, notificationsEnabled: true, maxMessages: 50 }`
+
+**Message Cache** (chrome.storage.local):
+- `getMessages()` → Returns array of cached messages
+- `saveMessages(messages)` → Replaces message cache
+- `appendMessages(newMessages)` → Adds new messages, dedupes, sorts by date, trims to maxMessages
+- `clearMessages()` → Clears message cache and read state
+
+**Read State Tracking**:
+- `getLastReadId()` → Returns ID of last read message
+- `setLastReadId(messageId)` → Sets last read marker
+- `getUnreadCount()` → Returns count of messages newer than last read
+- `markAllRead()` → Marks all current messages as read
+
+**Utility**:
+- `clearAll()` → Clears all local storage (for logout)
+
+---
+
 ## Next Steps
 
 | Step | Task | Status |
 |------|------|--------|
-| 2 | Create `lib/storage.js` | 🔲 Pending |
+| 2 | Create `lib/storage.js` | ✅ Done |
 | 3 | Create `lib/api.js` | 🔲 Pending |
 | 4 | Create `lib/utils.js` | 🔲 Pending |
 | 5 | Create Login page | 🔲 Pending |
