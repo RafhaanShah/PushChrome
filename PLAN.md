@@ -656,6 +656,12 @@ zip -r pushover-chrome.zip manifest.json src/ -x "*.DS_Store" -x "*.map"
 - Larger, resizable window for easier message browsing
 - Persist window size/position preferences
 
+### Login Email Persistence
+- Temporarily store the user's typed email in `chrome.storage.session` during login flow
+- Pre-fill the email field when returning to login page
+- Clear stored email after successful login/device registration
+- Allows user to close popup to retrieve password without losing email input
+
 ### Soft-Deleted Message Cleanup
 - Messages are soft-deleted locally (marked with `_deletedAt` timestamp) rather than removed
 - This prevents re-fetching deleted messages from the server before `update_highest_message` syncs
