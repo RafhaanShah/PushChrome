@@ -25,11 +25,13 @@ function formatErrors(errors) {
 
 async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
+  const { signal, ...rest } = options;
   const response = await fetch(url, {
-    ...options,
+    ...rest,
+    signal,
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      ...options.headers
+      ...rest.headers
     }
   });
 
@@ -107,10 +109,10 @@ export async function registerDevice(secret, deviceName) {
   return data.id;
 }
 
-export async function fetchMessages(secret, deviceId) {
+export async function fetchMessages(secret, deviceId, signal = null) {
   const { data } = await apiRequest(
     `/messages.json?secret=${encodeURIComponent(secret)}&device_id=${encodeURIComponent(deviceId)}`,
-    { method: 'GET' }
+    { method: 'GET', signal }
   );
 
   if (data.status !== 1) {
@@ -124,9 +126,10 @@ export async function fetchMessages(secret, deviceId) {
   return data.messages || [];
 }
 
-export async function deleteMessages(secret, deviceId, highestMessageId) {
+export async function deleteMessages(secret, deviceId, highestMessageId, signal = null) {
   const { data } = await apiRequest(`/devices/${encodeURIComponent(deviceId)}/update_highest_message.json`, {
     method: 'POST',
+    signal,
     body: encodeParams({
       secret,
       message: highestMessageId

@@ -4,7 +4,6 @@
 const STORAGE_KEYS = {
   SESSION: 'session',
   MESSAGES: 'messages',
-  LAST_READ_ID: 'lastReadId',
   SETTINGS: 'settings',
   PENDING_LOGIN: 'pendingLogin',
   DEVICES: 'devices'
@@ -83,14 +82,38 @@ export async function saveMessages(messages) {
   await chrome.storage.local.set({ [STORAGE_KEYS.MESSAGES]: messages });
 }
 
+export async function softDeleteMessage(messageId) {
+  const messages = await getMessages();
+  const updated = messages.map(m => 
+    m.id === messageId ? { ...m, _deletedAt: Date.now() } : m
+  );
+  await saveMessages(updated);
+}
+
+export async function getVisibleMessages() {
+  const messages = await getMessages();
+  return messages.filter(m => !m._deletedAt);
+}
+
+export async function purgeDeletedMessages(olderThanMs = 24 * 60 * 60 * 1000) {
+  const messages = await getMessages();
+  const cutoff = Date.now() - olderThanMs;
+  const filtered = messages.filter(m => !m._deletedAt || m._deletedAt > cutoff);
+  await saveMessages(filtered);
+  return messages.length - filtered.length;
+}
+
 export async function appendMessages(newMessages) {
-  if (!newMessages || newMessages.length === 0) return;
+  if (!newMessages || newMessages.length === 0) return 0;
   
   const existing = await getMessages();
   const existingIds = new Set(existing.map(m => m.id));
   
-  const uniqueNew = newMessages.filter(m => !existingIds.has(m.id));
-  if (uniqueNew.length === 0) return;
+  const uniqueNew = newMessages
+    .filter(m => !existingIds.has(m.id))
+    .map(m => ({ ...m, _seen: false }));
+  
+  if (uniqueNew.length === 0) return 0;
   
   const combined = [...existing, ...uniqueNew];
   combined.sort((a, b) => b.date - a.date);
@@ -103,43 +126,22 @@ export async function appendMessages(newMessages) {
 }
 
 export async function clearMessages() {
-  await chrome.storage.local.remove([STORAGE_KEYS.MESSAGES, STORAGE_KEYS.LAST_READ_ID]);
+  await chrome.storage.local.remove(STORAGE_KEYS.MESSAGES);
 }
 
 // =============================================================================
-// Read State Tracking
+// Read State Tracking (per-message _seen flag)
 // =============================================================================
-
-export async function getLastReadId() {
-  const result = await chrome.storage.local.get(STORAGE_KEYS.LAST_READ_ID);
-  return result[STORAGE_KEYS.LAST_READ_ID] || null;
-}
-
-export async function setLastReadId(messageId) {
-  await chrome.storage.local.set({ [STORAGE_KEYS.LAST_READ_ID]: messageId });
-}
 
 export async function getUnreadCount() {
-  const messages = await getMessages();
-  const lastReadId = await getLastReadId();
-  
-  if (!lastReadId) {
-    return messages.length;
-  }
-  
-  let count = 0;
-  for (const msg of messages) {
-    if (String(msg.id) === String(lastReadId)) break;
-    count++;
-  }
-  return count;
+  const messages = await getVisibleMessages();
+  return messages.filter(m => !m._seen).length;
 }
 
 export async function markAllRead() {
   const messages = await getMessages();
-  if (messages.length > 0) {
-    await setLastReadId(messages[0].id);
-  }
+  const updated = messages.map(m => m._seen ? m : { ...m, _seen: true });
+  await saveMessages(updated);
 }
 
 // =============================================================================

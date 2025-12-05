@@ -61,16 +61,17 @@ src/
 - Default settings: `{ apiToken, userKey, refreshInterval: 5, notificationsEnabled: true, maxMessages: 50 }`
 
 **Message Cache** (chrome.storage.local):
-- `getMessages()` → Returns array of cached messages
+- `getMessages()` → Returns array of cached messages (including soft-deleted)
 - `saveMessages(messages)` → Replaces message cache
-- `appendMessages(newMessages)` → Adds new messages, dedupes, sorts by date, trims to maxMessages
-- `clearMessages()` → Clears message cache and read state
+- `appendMessages(newMessages)` → Adds new messages with `_seen: false`, dedupes, sorts by date, trims to maxMessages
+- `clearMessages()` → Clears message cache
+- `softDeleteMessage(messageId)` → Marks message with `_deletedAt` timestamp (soft delete)
+- `getVisibleMessages()` → Returns messages excluding soft-deleted ones
+- `purgeDeletedMessages(olderThanMs)` → Removes soft-deleted messages older than threshold (default 24h)
 
-**Read State Tracking**:
-- `getLastReadId()` → Returns ID of last read message
-- `setLastReadId(messageId)` → Sets last read marker
-- `getUnreadCount()` → Returns count of messages newer than last read
-- `markAllRead()` → Marks all current messages as read
+**Read State Tracking** (per-message `_seen` flag):
+- `getUnreadCount()` → Returns count of visible messages where `_seen: false`
+- `markAllRead()` → Sets `_seen: true` on all messages
 
 **Pending Login State** (chrome.storage.session - browser session only):
 - `getPendingLogin()` → Returns `{ secret, userId }` or null
@@ -134,6 +135,7 @@ src/
 
 **URL Helpers**:
 - `isValidUrl(str)` → Boolean validation
+- `linkifyText(text)` → Escapes HTML and converts URLs to clickable links
 
 **DOM Helpers**:
 - `$(selector)` / `$$(selector)` → Query shortcuts
@@ -209,6 +211,49 @@ src/
 
 ---
 
+### Step 7: Create Message List Popup ✅
+**Completed:** 2024-12-05
+
+**Updated Files:**
+- `src/popup/popup.html` - Full message list UI with header actions
+- `src/popup/popup.js` - Message fetching, caching, and display logic
+- `src/popup/popup.css` - Message styling with priority indicators
+
+**Features:**
+- **Message Display**: App icon + app name on top row, full-width title below, then body
+- **HTML Support**: Renders messages with `html=1` flag; plain text auto-linkified via `linkifyText()`
+- **Unread Indicators**: Blue dot under timestamp for unseen messages (`_seen: false`)
+- **Priority Styling**: Visual distinction for High/Emergency/Low/Lowest priorities
+  - Emergency: Red left border, pulsing animation
+  - High: Orange/amber left border
+  - Priority badges with labels
+- **Emergency Acknowledgment**: Inline button to acknowledge emergency messages
+- **Message Links**: Auto-detected URLs are clickable and highlighted
+- **Relative Timestamps**: "2m ago", "3h ago", etc. with full date tooltip
+- **Delete Messages**: Hover to reveal delete button (crossfade with timestamp), soft-deletes message
+
+**Refresh & Caching:**
+- **Auto-refresh on open**: Fetches new messages when popup opens
+- **Debounce protection**: 10-second minimum between refreshes
+- **Spinning refresh icon**: Visual feedback during refresh
+- **Local storage**: Messages cached locally with `_seen` flag (server deletes after fetch)
+- **Soft-delete**: Deleted messages marked with `_deletedAt`, prevents re-fetching from server
+
+**State Management:**
+- Login check on load with redirect prompt
+- Error state with retry button
+- Empty state when no messages
+- Marks messages as read (`_seen: true`) when popup opens
+- Updates badge count after refresh
+- AbortController cancels in-flight requests on popup close
+
+**Navigation:**
+- Settings button → Opens settings page in new tab
+- Send button → Opens send message page in new tab
+- Manual refresh button with debounce
+
+---
+
 ## Next Steps
 
 | Step | Task | Status |
@@ -218,7 +263,7 @@ src/
 | 4 | Create `lib/utils.js` | ✅ Done |
 | 5 | Create Login page | ✅ Done |
 | 6 | Create Settings page | ✅ Done |
-| 7 | Create Message list popup | 🔲 Pending |
+| 7 | Create Message list popup | ✅ Done |
 | 8 | Create Send message page | 🔲 Pending |
 | 9 | Create Background worker | 🔲 Pending |
 | 10 | Add badge & notifications | 🔲 Pending |
@@ -240,3 +285,4 @@ src/
 - [ ] **Send-only mode**: Allow sending messages without login/device registration (no desktop license needed)
 - [ ] **Device list refresh**: Periodically refresh device list from API, store with timestamp
 - [ ] **Pop-out mode**: Open message list in standalone resizable window
+- [ ] **Soft-deleted message cleanup**: Background worker should call `purgeDeletedMessages()` periodically (e.g., on startup and daily)

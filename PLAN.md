@@ -655,3 +655,10 @@ zip -r pushover-chrome.zip manifest.json src/ -x "*.DS_Store" -x "*.map"
 - Use `chrome.windows.create()` with popup type
 - Larger, resizable window for easier message browsing
 - Persist window size/position preferences
+
+### Soft-Deleted Message Cleanup
+- Messages are soft-deleted locally (marked with `_deletedAt` timestamp) rather than removed
+- This prevents re-fetching deleted messages from the server before `update_highest_message` syncs
+- Background worker should periodically call `storage.purgeDeletedMessages()` to clean up
+- Default: purge messages deleted more than 24 hours ago
+- Run cleanup on extension startup and periodically (e.g., daily)

@@ -112,6 +112,16 @@ export function isValidUrl(str) {
   }
 }
 
+const URL_REGEX = /(https?:\/\/[^\s<>"']+)/gi;
+
+export function linkifyText(text) {
+  if (!text) return '';
+  const escaped = escapeHtml(text);
+  return escaped.replace(URL_REGEX, (url) => {
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+  });
+}
+
 // =============================================================================
 // DOM Helpers
 // =============================================================================
