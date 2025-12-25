@@ -1,0 +1,145 @@
+/* Send Message Page Styles */
+
+.send-container {
+  max-width: 400px;
+  min-height: 400px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header h1 {
+  flex: 1;
+}
+
+.header-spacer {
+  width: 28px;
+}
+
+/* Credentials Warning Banner */
+.warning-banner {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.warning-banner p {
+  color: #92400e;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.warning-banner a {
+  color: #d97706;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Form Styles */
+#send-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#send-form .form-group {
+  margin-bottom: 12px;
+}
+
+#send-form textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.required {
+  color: #e53935;
+}
+
+/* Character Count */
+.char-count {
+  font-size: 12px;
+  color: #888;
+  text-align: right;
+  margin-top: 4px;
+}
+
+.char-count.over-limit {
+  color: #e53935;
+  font-weight: 500;
+}
+
+/* Error Banner */
+.error-banner {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  color: #dc2626;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Success Banner */
+.success-banner {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  color: #166534;
+  font-size: 13px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Sticky Send Section */
+.send-section {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  padding: 12px;
+  margin: 0 -12px -12px;
+  border-top: 1px solid #e0e0e0;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Button Block */
+.btn-block {
+  width: 100%;
+}
+
+/* Button Loading State */
+.btn-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-loading .spinner {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+}
+
+/* Button Disabled State */
+#send-btn:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+}
+
+/* Select Styling */
+#send-form select {
+  background: white;
+}
+
+/* Compact form labels */
+#send-form label {
+  font-size: 13px;
+}

@@ -78,6 +78,10 @@ src/
 - `savePendingLogin(loginResult)` → Stores pending login for device registration
 - `clearPendingLogin()` → Clears pending login state
 
+**Send Preferences** (chrome.storage.local):
+- `getSendPreferences()` → Returns `{ device, priority, sound }` with defaults
+- `saveSendPreferences(prefs)` → Stores last used send settings
+
 **Utility**:
 - `clearAll()` → Clears all local and session storage (for logout)
 
@@ -254,6 +258,46 @@ src/
 
 ---
 
+### Step 8: Create Send Message Page ✅
+**Completed:** 2024-12-25
+
+**Created Files:**
+- `src/pages/send.html` - Send message form layout
+- `src/pages/send.js` - Form handling and API integration
+- `src/pages/send.css` - Send page styling
+
+**Features:**
+- **Message input** (required): Textarea with 1024 character limit and live counter
+- **Title input** (optional): Optional message title with 250 character limit and counter
+- **Device dropdown**: Populated from validated credentials, defaults to "All devices"
+- **Priority selector**: Lowest, Low, Normal, High, Emergency options
+- **URL input** (optional): Supplementary URL with 512 character limit and counter
+- **URL Title** (optional): Custom link text with 100 character limit and counter
+- **Sound selector**: All Pushover sounds including long sounds and silent option
+
+**Validation:**
+- All fields validated against character limits in real-time
+- Send button disabled when any field exceeds limit or message is empty
+- Send button disabled when credentials not configured
+- Character counters turn red when over limit
+
+**UX:**
+- Credentials warning banner if API token/user key not configured
+- Sticky send button at bottom of page (matches settings page pattern)
+- Success/error banners displayed above send button in sticky section
+- Loading spinner on send button during submission
+- Success banner with auto-dismiss after 3 seconds
+- Only message/title/URL fields cleared after send (preferences preserved)
+- Back button returns to popup
+- Button starts disabled to prevent flash of enabled state on load
+
+**Preference Persistence:**
+- Last used device, priority, and sound saved on successful send
+- Preferences restored when reopening send page
+- Stored in `chrome.storage.local` via `getSendPreferences()`/`saveSendPreferences()`
+
+---
+
 ## Next Steps
 
 | Step | Task | Status |
@@ -264,7 +308,7 @@ src/
 | 5 | Create Login page | ✅ Done |
 | 6 | Create Settings page | ✅ Done |
 | 7 | Create Message list popup | ✅ Done |
-| 8 | Create Send message page | 🔲 Pending |
+| 8 | Create Send message page | ✅ Done |
 | 9 | Create Background worker | 🔲 Pending |
 | 10 | Add badge & notifications | 🔲 Pending |
 | 11 | Polish UI & error handling | 🔲 Pending |

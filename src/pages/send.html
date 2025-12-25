@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Send Message - Pushover</title>
+  <link rel="stylesheet" href="../styles/common.css">
+  <link rel="stylesheet" href="send.css">
+</head>
+<body>
+  <div class="container send-container">
+    <header class="header">
+      <button id="back-btn" class="icon-btn" title="Back">←</button>
+      <h1>Send Message</h1>
+      <div class="header-spacer"></div>
+    </header>
+
+    <main id="content">
+      <!-- Credentials Warning -->
+      <div id="credentials-warning" class="warning-banner hidden">
+        <p>Send credentials not configured.</p>
+        <a href="settings.html">Configure in Settings →</a>
+      </div>
+
+      <form id="send-form">
+        <!-- Message (required) -->
+        <div class="form-group">
+          <label for="message">Message <span class="required">*</span></label>
+          <textarea 
+            id="message" 
+            name="message" 
+            rows="4" 
+            placeholder="Enter your message..."
+            required
+            maxlength="1024"
+          ></textarea>
+          <div class="char-count"><span id="message-count">0</span>/1024</div>
+        </div>
+
+        <!-- Title (optional) -->
+        <div class="form-group">
+          <label for="title">Title</label>
+          <input 
+            type="text" 
+            id="title" 
+            name="title" 
+            placeholder="Optional title"
+            maxlength="250"
+          >
+          <div class="char-count"><span id="title-count">0</span>/250</div>
+        </div>
+
+        <!-- Device (optional) -->
+        <div class="form-group">
+          <label for="device">Device</label>
+          <select id="device" name="device">
+            <option value="">All devices</option>
+          </select>
+        </div>
+
+        <!-- Priority -->
+        <div class="form-group">
+          <label for="priority">Priority</label>
+          <select id="priority" name="priority">
+            <option value="-2">Lowest (no alert)</option>
+            <option value="-1">Low (quiet)</option>
+            <option value="0" selected>Normal</option>
+            <option value="1">High</option>
+            <option value="2">Emergency (requires acknowledgment)</option>
+          </select>
+        </div>
+
+        <!-- URL (optional) -->
+        <div class="form-group">
+          <label for="url">URL</label>
+          <input 
+            type="url" 
+            id="url" 
+            name="url" 
+            placeholder="https://example.com"
+            maxlength="512"
+          >
+          <div class="char-count"><span id="url-count">0</span>/512</div>
+        </div>
+
+        <!-- URL Title (optional) -->
+        <div class="form-group">
+          <label for="url-title">URL Title</label>
+          <input 
+            type="text" 
+            id="url-title" 
+            name="urlTitle" 
+            placeholder="Link text (optional)"
+            maxlength="100"
+          >
+          <div class="char-count"><span id="url-title-count">0</span>/100</div>
+        </div>
+
+        <!-- Sound (optional) -->
+        <div class="form-group">
+          <label for="sound">Sound</label>
+          <select id="sound" name="sound">
+            <option value="">Default</option>
+            <option value="pushover">Pushover (default)</option>
+            <option value="bike">Bike</option>
+            <option value="bugle">Bugle</option>
+            <option value="cashregister">Cash Register</option>
+            <option value="classical">Classical</option>
+            <option value="cosmic">Cosmic</option>
+            <option value="falling">Falling</option>
+            <option value="gamelan">Gamelan</option>
+            <option value="incoming">Incoming</option>
+            <option value="intermission">Intermission</option>
+            <option value="magic">Magic</option>
+            <option value="mechanical">Mechanical</option>
+            <option value="pianobar">Piano Bar</option>
+            <option value="siren">Siren</option>
+            <option value="spacealarm">Space Alarm</option>
+            <option value="tugboat">Tug Boat</option>
+            <option value="alien">Alien Alarm (long)</option>
+            <option value="climb">Climb (long)</option>
+            <option value="persistent">Persistent (long)</option>
+            <option value="echo">Pushover Echo (long)</option>
+            <option value="updown">Up Down (long)</option>
+            <option value="vibrate">Vibrate Only</option>
+            <option value="none">None (silent)</option>
+          </select>
+        </div>
+
+      </form>
+    </main>
+
+    <!-- Sticky Send Section -->
+    <div class="send-section">
+      <!-- Error Display -->
+      <div id="error-message" class="error-banner hidden"></div>
+
+      <!-- Success Display -->
+      <div id="success-message" class="success-banner hidden">
+        ✓ Message sent successfully!
+      </div>
+
+      <button type="submit" form="send-form" id="send-btn" class="btn btn-primary btn-block" disabled>
+        <span class="btn-text">Send Message</span>
+        <span class="btn-loading hidden">
+          <span class="spinner"></span>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <script type="module" src="send.js"></script>
+</body>
+</html>

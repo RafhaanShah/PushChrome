@@ -662,6 +662,25 @@ zip -r pushover-chrome.zip manifest.json src/ -x "*.DS_Store" -x "*.map"
 - Clear stored email after successful login/device registration
 - Allows user to close popup to retrieve password without losing email input
 
+### Invalidated Credentials Handling
+- Detect when API returns authentication errors (invalid secret, revoked device, expired session)
+- Show user-friendly error explaining credentials are no longer valid
+- Prompt user to re-authenticate without losing cached messages
+- Consider preserving send credentials (API token/user key) separately from session
+
+### Re-Login Flow
+- Allow logged-in users to re-authenticate without full logout
+- Useful when session expires but user wants to keep same device name
+- Option to "refresh session" vs "logout and start fresh"
+- Handle device name conflicts gracefully (device already exists for this account)
+
+### Auto-Save Settings
+- Remove manual "Save Settings" button
+- Auto-save settings on change with debounce (e.g., 500ms delay)
+- Show subtle save indicator (checkmark or "Saved" text) after auto-save
+- Validate credentials before saving API token/user key (optional warning if invalid)
+- Update alarm interval immediately on refresh interval change
+
 ### Soft-Deleted Message Cleanup
 - Messages are soft-deleted locally (marked with `_deletedAt` timestamp) rather than removed
 - This prevents re-fetching deleted messages from the server before `update_highest_message` syncs

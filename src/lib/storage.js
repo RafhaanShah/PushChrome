@@ -6,7 +6,8 @@ const STORAGE_KEYS = {
   MESSAGES: 'messages',
   SETTINGS: 'settings',
   PENDING_LOGIN: 'pendingLogin',
-  DEVICES: 'devices'
+  DEVICES: 'devices',
+  SEND_PREFERENCES: 'sendPreferences'
 };
 
 const DEFAULT_SETTINGS = {
@@ -67,6 +68,19 @@ export async function getDevices() {
 
 export async function saveDevices(devices) {
   await chrome.storage.local.set({ [STORAGE_KEYS.DEVICES]: devices });
+}
+
+// =============================================================================
+// Send Preferences (chrome.storage.local - last used send settings)
+// =============================================================================
+
+export async function getSendPreferences() {
+  const result = await chrome.storage.local.get(STORAGE_KEYS.SEND_PREFERENCES);
+  return result[STORAGE_KEYS.SEND_PREFERENCES] || { device: '', priority: '0', sound: '' };
+}
+
+export async function saveSendPreferences(prefs) {
+  await chrome.storage.local.set({ [STORAGE_KEYS.SEND_PREFERENCES]: prefs });
 }
 
 // =============================================================================
