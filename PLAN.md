@@ -617,6 +617,153 @@ zip -r pushover-chrome.zip manifest.json src/ -x "*.DS_Store" -x "*.map"
 
 ---
 
+## Context Menu Integration
+
+### Overview
+Add right-click context menu to send page URLs or selected text via Pushover. Sends happen **directly in the background** without opening any popup - device selection is done via nested submenu.
+
+### Menu Structure
+```
+Right-click on page:
+└── Send page to Pushover →
+    ├── All devices
+    ├── ─────────────
+    ├── iPhone
+    ├── Desktop
+    └── chrome-ext-abc123
+
+Right-click on selected text:
+└── Send "selected text..." to Pushover →
+    ├── All devices
+    ├── ─────────────
+    ├── iPhone
+    ├── Desktop
+    └── chrome-ext-abc123
+```
+
+### Implementation
+
+1. **Update `manifest.json`**
+   - Add `contextMenus` permission
+   ```json
+   "permissions": ["storage", "alarms", "notifications", "contextMenus"]
+   ```
+
+2. **Create context menu items** (in service-worker.js)
+   ```js
+   // Build menu on install and when devices change
+   async function buildContextMenus() {
+     await chrome.contextMenus.removeAll();
+     
+     const devices = await getDevices();
+     const settings = await getSettings();
+     
+     // Only show menus if send credentials are configured
+     if (!settings.apiToken || !settings.userKey) return;
+     
+     // Parent menu for page URL
+     chrome.contextMenus.create({
+       id: 'send-page',
+       title: 'Send page to Pushover',
+       contexts: ['page']
+     });
+     
+     // Parent menu for selected text
+     chrome.contextMenus.create({
+       id: 'send-selection',
+       title: 'Send "%s" to Pushover',
+       contexts: ['selection']
+     });
+     
+     // Add device options under each parent
+     for (const parent of ['send-page', 'send-selection']) {
+       chrome.contextMenus.create({
+         id: `${parent}-all`,
+         parentId: parent,
+         title: 'All devices'
+       });
+       
+       if (devices.length > 0) {
+         chrome.contextMenus.create({
+           id: `${parent}-separator`,
+           parentId: parent,
+           type: 'separator'
+         });
+         
+         for (const device of devices) {
+           chrome.contextMenus.create({
+             id: `${parent}-${device}`,
+             parentId: parent,
+             title: device
+           });
+         }
+       }
+     }
+   }
+   
+   chrome.runtime.onInstalled.addListener(buildContextMenus);
+   
+   // Rebuild menus when devices are updated
+   chrome.storage.onChanged.addListener((changes, area) => {
+     if (area === 'local' && changes.devices) {
+       buildContextMenus();
+     }
+   });
+   ```
+
+3. **Handle context menu clicks - send in background**
+   ```js
+   chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+     const settings = await getSettings();
+     const menuId = info.menuItemId;
+     
+     // Parse menu ID: "send-page-deviceName" or "send-selection-all"
+     const isPage = menuId.startsWith('send-page-');
+     const isSelection = menuId.startsWith('send-selection-');
+     const device = menuId.replace(/^send-(page|selection)-/, '');
+     
+     const params = {
+       token: settings.apiToken,
+       user: settings.userKey,
+       device: device === 'all' ? undefined : device
+     };
+     
+     if (isPage) {
+       params.message = tab.title || info.pageUrl;
+       params.url = info.pageUrl;
+     } else if (isSelection) {
+       params.message = info.selectionText;
+       params.url = info.pageUrl;
+       params.urlTitle = tab.title;
+     }
+     
+     try {
+       await sendMessage(params);
+       // Show success notification
+       chrome.notifications.create({
+         type: 'basic',
+         iconUrl: 'src/icons/icon-128.png',
+         title: 'Message Sent',
+         message: `Sent to ${device === 'all' ? 'all devices' : device}`
+       });
+     } catch (error) {
+       // Show error notification
+       chrome.notifications.create({
+         type: 'basic',
+         iconUrl: 'src/icons/icon-128.png',
+         title: 'Send Failed',
+         message: error.message || 'Failed to send message'
+       });
+     }
+   });
+   ```
+
+4. **Rebuild menus when credentials are validated**
+   - After successful credential validation in settings, call `buildContextMenus()`
+   - Use `chrome.runtime.sendMessage` to notify service worker to rebuild
+
+---
+
 ## Future Enhancements (Out of Scope)
 
 - [ ] WebSocket real-time connection (`wss://client.pushover.net/push`)
@@ -687,3 +834,10 @@ zip -r pushover-chrome.zip manifest.json src/ -x "*.DS_Store" -x "*.map"
 - Background worker should periodically call `storage.purgeDeletedMessages()` to clean up
 - Default: purge messages deleted more than 24 hours ago
 - Run cleanup on extension startup and periodically (e.g., daily)
+
+### Verbose Logging Toggle
+- Add "Enable verbose logging" toggle in settings (default: off)
+- When enabled: log all activity (refreshes, messages sent, API calls, storage operations)
+- When disabled: only log warnings and errors
+- Create a `log` utility that checks the setting before logging
+- Useful for debugging issues without cluttering console in normal use

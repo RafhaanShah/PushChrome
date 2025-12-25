@@ -1,5 +1,4 @@
 // Pushover Chrome Extension - Send Message Page
-import { sendMessage } from '../lib/api.js';
 import { getSettings, getDevices, getSendPreferences, saveSendPreferences } from '../lib/storage.js';
 import { $ } from '../lib/utils.js';
 
@@ -167,7 +166,15 @@ async function handleSubmit(e) {
       sound: elements.sound.value || undefined
     };
 
-    await sendMessage(params);
+    // Delegate to service worker so send continues if popup closes
+    const result = await chrome.runtime.sendMessage({ 
+      action: 'sendMessage', 
+      params 
+    });
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to send message');
+    }
 
     await saveSendPreferences({
       device: elements.device.value,
@@ -181,6 +188,7 @@ async function handleSubmit(e) {
     elements.url.value = '';
     elements.urlTitle.value = '';
     elements.messageCount.textContent = '0';
+    handleInput(); // Re-validate form
   } catch (error) {
     showError(error.message || 'Failed to send message. Please try again.');
   } finally {

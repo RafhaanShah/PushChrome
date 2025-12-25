@@ -298,6 +298,47 @@ src/
 
 ---
 
+### Step 9: Create Background Worker ✅
+**Completed:** 2024-12-25
+
+**Updated:** `src/background/service-worker.js`
+
+**Alarm Management:**
+- `refreshMessages` alarm: Periodic message fetch based on `settings.refreshInterval`
+- `cleanupMessages` alarm: Daily purge of soft-deleted messages (older than 24h)
+- Alarms reconfigured when settings change or user logs in/out
+- Alarms cleared when user is not logged in
+
+**Message Refresh:**
+- Fetches messages from Pushover API via `fetchMessages()`
+- Appends new messages to local cache via `appendMessages()`
+- Deletes messages from server after caching via `deleteMessages()`
+- Triggers on alarm, browser startup, and manual request
+
+**Badge Management:**
+- Updates badge with unread count (respects `settings.badgeEnabled`)
+- Red background color (#E53935) for visibility
+- Shows "99+" for counts over 99
+- Updates when messages change in storage
+
+**Notifications:**
+- Shows Chrome notification for each new message (respects `settings.notificationsEnabled`)
+- Uses Pushover app icon if available, falls back to extension icon
+- Emergency messages (priority 2) require interaction and show "Acknowledge" button
+- Notification click opens popup
+- Button click acknowledges emergency via API
+
+**Storage Listeners:**
+- Watches for message changes → updates badge
+- Watches for settings changes → reconfigures alarms
+- Watches for session changes → sets up alarms on login, refreshes messages
+
+**Message Handlers:**
+- `refreshMessages` action: Manual refresh from popup
+- `updateBadge` action: Force badge update
+
+---
+
 ## Next Steps
 
 | Step | Task | Status |
@@ -309,10 +350,51 @@ src/
 | 6 | Create Settings page | ✅ Done |
 | 7 | Create Message list popup | ✅ Done |
 | 8 | Create Send message page | ✅ Done |
-| 9 | Create Background worker | 🔲 Pending |
-| 10 | Add badge & notifications | 🔲 Pending |
+| 9 | Create Background worker | ✅ Done |
+| 9b | Context menu integration | 🔲 Pending |
+| 10 | Add badge & notifications | ✅ Done (in Step 9) |
 | 11 | Polish UI & error handling | 🔲 Pending |
 | 12 | Testing & bug fixes | 🔲 Pending |
+
+---
+
+## Planned: Context Menu Integration (Step 9b)
+
+**Goal:** Right-click context menu to send page URLs or selected text via Pushover. **Sends happen directly in the background** - no popup opened. Device selection via nested submenu.
+
+### Menu Structure
+```
+Right-click on page → "Send page to Pushover" → [All devices, Device1, Device2...]
+Right-click on selection → "Send 'text...' to Pushover" → [All devices, Device1, Device2...]
+```
+
+### Tasks
+
+1. **Update manifest.json**
+   - Add `contextMenus` permission
+
+2. **Create dynamic context menu** (in service-worker.js)
+   - `buildContextMenus()` function that creates parent menus and device submenus
+   - Called on `chrome.runtime.onInstalled`
+   - Only shown if send credentials (apiToken, userKey) are configured
+   - Rebuild when devices change via `chrome.storage.onChanged`
+
+3. **Handle context menu clicks - send in background**
+   - Parse menu ID to determine action type and target device
+   - For page: send page title as message, page URL as supplementary URL
+   - For selection: send selected text as message, page URL as supplementary
+   - Call `sendMessage()` API directly from service worker
+   - Show Chrome notification on success/failure
+
+4. **Rebuild menus on credential validation**
+   - When user validates credentials in settings, notify service worker
+   - Use `chrome.runtime.sendMessage({ action: 'rebuildContextMenus' })`
+   - Service worker listens and calls `buildContextMenus()`
+
+### No popup required
+- All sending happens in the service worker background
+- Success/failure shown via Chrome notifications
+- Much faster UX than opening a page
 
 ---
 

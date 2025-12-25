@@ -4,14 +4,11 @@ import * as storage from '../lib/storage.js';
 import * as api from '../lib/api.js';
 import { $, escapeHtml, formatRelativeTime, getPriorityClass, getPriorityLabel, linkifyText } from '../lib/utils.js';
 
-const DEBOUNCE_INTERVAL_MS = 60000;
-const LAST_REFRESH_KEY = 'lastRefreshTimestamp';
-
 let isRefreshing = false;
-let abortController = null;
 
 async function init() {
   setupEventListeners();
+  setupMessageListener();
   await checkAuthAndLoadMessages();
 }
 
@@ -24,11 +21,23 @@ function setupEventListeners() {
     window.location.href = 'send.html';
   });
 
-  $('#refresh-btn').addEventListener('click', () => refreshMessages(true));
+  $('#refresh-btn').addEventListener('click', () => refreshMessages(false)); // Manual: no debounce
   $('#login-btn')?.addEventListener('click', () => {
     window.location.href = 'login.html';
   });
-  $('#retry-btn')?.addEventListener('click', () => refreshMessages(true));
+  $('#retry-btn')?.addEventListener('click', () => refreshMessages(false)); // Manual: no debounce
+}
+
+function setupMessageListener() {
+  // Listen for updates from service worker when new messages arrive
+  chrome.runtime.onMessage.addListener((request) => {
+    if (request.action === 'messagesUpdated') {
+      // Reload and display messages, mark as read
+      loadAndDisplayMessages().then(() => {
+        markMessagesAsRead();
+      });
+    }
+  });
 }
 
 async function checkAuthAndLoadMessages() {
@@ -40,7 +49,13 @@ async function checkAuthAndLoadMessages() {
   }
 
   await loadAndDisplayMessages();
-  await refreshMessagesWithDebounce();
+  
+  // Immediately mark as read and clear badge/notifications on popup open
+  await markMessagesAsRead();
+  await updateBadge();
+  
+  // Auto-refresh on popup open (debounced - only if last refresh > 1 min ago)
+  await refreshMessages(true);
 }
 
 function showLoginPrompt() {
@@ -192,85 +207,50 @@ async function acknowledgeMessage(receipt, button) {
   }
 }
 
-async function refreshMessagesWithDebounce() {
-  const lastRefresh = await getLastRefreshTime();
-  const now = Date.now();
-
-  if (lastRefresh && (now - lastRefresh) < DEBOUNCE_INTERVAL_MS) {
-    return;
-  }
-
-  await refreshMessages(false);
-}
-
-async function getLastRefreshTime() {
-  const result = await chrome.storage.session.get(LAST_REFRESH_KEY);
-  return result[LAST_REFRESH_KEY] || null;
-}
-
-async function setLastRefreshTime() {
-  await chrome.storage.session.set({ [LAST_REFRESH_KEY]: Date.now() });
-}
-
-async function refreshMessages(force = false) {
+async function refreshMessages(checkDebounce = false) {
   if (isRefreshing) return;
 
-  if (!force) {
-    const lastRefresh = await getLastRefreshTime();
-    const now = Date.now();
-    if (lastRefresh && (now - lastRefresh) < DEBOUNCE_INTERVAL_MS) {
-      return;
-    }
-  }
-
   isRefreshing = true;
-  abortController = new AbortController();
   setRefreshingState(true);
 
   try {
-    const session = await storage.getSession();
-    if (!session?.secret || !session?.deviceId) {
+    // Delegate refresh to service worker
+    const result = await chrome.runtime.sendMessage({ 
+      action: 'refreshMessages',
+      skipNotifications: true, // We're open, don't need notifications
+      checkDebounce: checkDebounce
+    });
+
+    if (result.debounced) {
+      // Debounced, nothing to do
+      return;
+    }
+
+    if (result.error === 'not_logged_in') {
       showLoginPrompt();
       return;
     }
 
-    const signal = abortController.signal;
-    const serverMessages = await api.fetchMessages(session.secret, session.deviceId, signal);
-
-    if (serverMessages.length > 0) {
-      await storage.appendMessages(serverMessages);
-
-      const highestId = Math.max(...serverMessages.map(m => m.id));
-      await api.deleteMessages(session.secret, session.deviceId, highestId, signal);
+    if (result.error) {
+      const messages = await storage.getMessages();
+      if (messages.length === 0) {
+        showError('Failed to load messages. Check your connection.');
+      } else {
+        showStatus('Refresh failed', true);
+      }
+      return;
     }
 
-    await setLastRefreshTime();
+    // Reload display after refresh
     await loadAndDisplayMessages();
     await markMessagesAsRead();
     await updateBadge();
 
   } catch (err) {
-    if (err.name === 'AbortError') {
-      return;
-    }
-
     console.error('Refresh error:', err);
-
-    if (err.status === 401 || (err.errors && err.errors.includes('invalid secret'))) {
-      await storage.clearSession();
-      showLoginPrompt();
-      return;
-    }
-
-    const messages = await storage.getMessages();
-    if (messages.length === 0) {
-      showError('Failed to load messages. Check your connection.');
-    } else {
-      showStatus('Refresh failed', true);
-    }
+    showStatus('Refresh failed', true);
   } finally {
     isRefreshing = false;
-    abortController = null;
     setRefreshingState(false);
   }
 }
@@ -290,6 +270,13 @@ function setRefreshingState(refreshing) {
 
 async function markMessagesAsRead() {
   await storage.markAllRead();
+  
+  // Clear notifications from OS tray since user has seen them
+  try {
+    await chrome.runtime.sendMessage({ action: 'clearNotifications' });
+  } catch (e) {
+    // Service worker may not be ready, ignore
+  }
 }
 
 async function updateBadge() {
