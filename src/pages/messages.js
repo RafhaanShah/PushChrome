@@ -5,6 +5,7 @@ import * as api from '../lib/api.js';
 import { $, escapeHtml, formatRelativeTime, getPriorityClass, getPriorityLabel, linkifyText } from '../lib/utils.js';
 
 let isRefreshing = false;
+let settings = null;
 
 async function init() {
   setupEventListeners();
@@ -26,15 +27,19 @@ function setupEventListeners() {
     window.location.href = 'login.html';
   });
   $('#retry-btn')?.addEventListener('click', () => refreshMessages(false)); // Manual: no debounce
+  $('#mark-read-btn').addEventListener('click', handleMarkAllRead);
 }
 
 function setupMessageListener() {
   // Listen for updates from service worker when new messages arrive
   chrome.runtime.onMessage.addListener((request) => {
     if (request.action === 'messagesUpdated') {
-      // Reload and display messages, mark as read
+      // Reload and display messages
       loadAndDisplayMessages().then(() => {
-        markMessagesAsRead();
+        updateMarkReadButton();
+        if (settings?.markAsReadOnOpen) {
+          markMessagesAsRead();
+        }
       });
     }
   });
@@ -48,11 +53,17 @@ async function checkAuthAndLoadMessages() {
     return;
   }
 
+  settings = await storage.getSettings();
   await loadAndDisplayMessages();
   
-  // Immediately mark as read and clear badge/notifications on popup open
-  await markMessagesAsRead();
-  await updateBadge();
+  // Show/hide mark as read button based on setting
+  updateMarkReadButton();
+  
+  // Conditionally mark as read on open
+  if (settings.markAsReadOnOpen) {
+    await markMessagesAsRead();
+    await updateBadge();
+  }
   
   // Auto-refresh on popup open (debounced - only if last refresh > 1 min ago)
   await refreshMessages(true);
@@ -243,8 +254,12 @@ async function refreshMessages(checkDebounce = false) {
 
     // Reload display after refresh
     await loadAndDisplayMessages();
-    await markMessagesAsRead();
-    await updateBadge();
+    updateMarkReadButton();
+    
+    if (settings.markAsReadOnOpen) {
+      await markMessagesAsRead();
+      await updateBadge();
+    }
 
   } catch (err) {
     console.error('Refresh error:', err);
@@ -276,6 +291,28 @@ async function markMessagesAsRead() {
     await chrome.runtime.sendMessage({ action: 'clearNotifications' });
   } catch (e) {
     // Service worker may not be ready, ignore
+  }
+  
+  // Re-render to remove unread indicators
+  await loadAndDisplayMessages();
+  updateMarkReadButton();
+}
+
+async function handleMarkAllRead() {
+  await markMessagesAsRead();
+  await updateBadge();
+}
+
+function updateMarkReadButton() {
+  const btn = $('#mark-read-btn');
+  
+  // Only show if markAsReadOnOpen is disabled AND there are unread messages
+  if (!settings?.markAsReadOnOpen) {
+    storage.getUnreadCount().then(count => {
+      btn.classList.toggle('hidden', count === 0);
+    });
+  } else {
+    btn.classList.add('hidden');
   }
 }
 

@@ -53,9 +53,14 @@
         <!-- Device (optional) -->
         <div class="form-group">
           <label for="device">Device</label>
-          <select id="device" name="device">
-            <option value="">All devices</option>
-          </select>
+          <div class="input-with-btn">
+            <select id="device" name="device">
+              <option value="">All devices</option>
+            </select>
+            <button type="button" id="refresh-devices-btn" class="icon-btn" title="Refresh device list">
+              <span class="refresh-icon">↻</span>
+            </button>
+          </div>
         </div>
 
         <!-- Priority -->

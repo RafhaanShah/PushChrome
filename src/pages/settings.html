@@ -90,6 +90,7 @@
         <div class="form-group">
           <label for="max-messages">Max Messages to Store</label>
           <select id="max-messages">
+            <option value="0">None (clear when read)</option>
             <option value="10">10 messages</option>
             <option value="25">25 messages</option>
             <option value="50">50 messages</option>
@@ -108,6 +109,13 @@
           <label for="badge-enabled">
             <input type="checkbox" id="badge-enabled">
             <span>Show unread count badge</span>
+          </label>
+        </div>
+
+        <div class="form-group toggle-group">
+          <label for="mark-as-read-on-open">
+            <input type="checkbox" id="mark-as-read-on-open">
+            <span>Mark messages as read on open</span>
           </label>
         </div>
       </section>

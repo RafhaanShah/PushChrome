@@ -11,6 +11,7 @@ const elements = {
   title: null,
   titleCount: null,
   device: null,
+  refreshDevicesBtn: null,
   priority: null,
   url: null,
   urlCount: null,
@@ -40,6 +41,7 @@ async function init() {
   elements.title = $('#title');
   elements.titleCount = $('#title-count');
   elements.device = $('#device');
+  elements.refreshDevicesBtn = $('#refresh-devices-btn');
   elements.priority = $('#priority');
   elements.url = $('#url');
   elements.urlCount = $('#url-count');
@@ -97,11 +99,49 @@ function bindEvents() {
   elements.title.addEventListener('input', handleInput);
   elements.url.addEventListener('input', handleInput);
   elements.urlTitle.addEventListener('input', handleInput);
+  elements.refreshDevicesBtn.addEventListener('click', handleRefreshDevices);
   elements.form.addEventListener('submit', handleSubmit);
 }
 
 function handleBack() {
   window.location.href = '../popup/popup.html';
+}
+
+async function handleRefreshDevices() {
+  const btn = elements.refreshDevicesBtn;
+  
+  if (btn.classList.contains('refreshing')) return;
+  
+  btn.classList.add('refreshing');
+  btn.disabled = true;
+  
+  try {
+    const result = await chrome.runtime.sendMessage({ action: 'refreshDevices' });
+    
+    if (result?.success && result.devices) {
+      // Remember current selection
+      const currentValue = elements.device.value;
+      
+      // Clear and repopulate device list
+      elements.device.innerHTML = '<option value="">All devices</option>';
+      result.devices.forEach(device => {
+        const option = document.createElement('option');
+        option.value = device;
+        option.textContent = device;
+        elements.device.appendChild(option);
+      });
+      
+      // Restore selection if still valid
+      if (result.devices.includes(currentValue)) {
+        elements.device.value = currentValue;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to refresh devices:', error);
+  } finally {
+    btn.classList.remove('refreshing');
+    btn.disabled = false;
+  }
 }
 
 function handleInput() {

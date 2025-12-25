@@ -16,7 +16,8 @@ const DEFAULT_SETTINGS = {
   refreshInterval: 5,
   notificationsEnabled: true,
   badgeEnabled: true,
-  maxMessages: 50
+  maxMessages: 50,
+  markAsReadOnOpen: true
 };
 
 // =============================================================================
@@ -117,6 +118,24 @@ export async function purgeDeletedMessages(olderThanMs = 24 * 60 * 60 * 1000) {
   return messages.length - filtered.length;
 }
 
+// Helper: Apply message limit - keeps all unread, trims read messages
+function trimMessages(messages, maxMessages) {
+  const unread = messages.filter(m => !m._seen && !m._deletedAt);
+  const read = messages.filter(m => m._seen || m._deletedAt);
+  
+  // If maxMessages is 0, discard all read messages
+  // Otherwise, trim read messages to fit within limit (leaving room for unread)
+  let trimmedRead = [];
+  if (maxMessages > 0) {
+    const maxRead = Math.max(0, maxMessages - unread.length);
+    trimmedRead = read.slice(0, maxRead);
+  }
+  
+  const result = [...unread, ...trimmedRead];
+  result.sort((a, b) => b.date - a.date);
+  return result;
+}
+
 export async function appendMessages(newMessages) {
   if (!newMessages || newMessages.length === 0) return 0;
   
@@ -133,14 +152,30 @@ export async function appendMessages(newMessages) {
   combined.sort((a, b) => b.date - a.date);
   
   const settings = await getSettings();
-  const trimmed = combined.slice(0, settings.maxMessages);
+  const result = trimMessages(combined, settings.maxMessages);
   
-  await saveMessages(trimmed);
+  await saveMessages(result);
   return uniqueNew.length;
 }
 
 export async function clearMessages() {
   await chrome.storage.local.remove(STORAGE_KEYS.MESSAGES);
+}
+
+export async function applyMessageLimit() {
+  const settings = await getSettings();
+  const messages = await getMessages();
+  
+  if (messages.length === 0) return 0;
+  
+  const result = trimMessages(messages, settings.maxMessages);
+  const removed = messages.length - result.length;
+  
+  if (removed > 0) {
+    await saveMessages(result);
+  }
+  
+  return removed;
 }
 
 // =============================================================================
@@ -153,9 +188,11 @@ export async function getUnreadCount() {
 }
 
 export async function markAllRead() {
+  const settings = await getSettings();
   const messages = await getMessages();
   const updated = messages.map(m => m._seen ? m : { ...m, _seen: true });
-  await saveMessages(updated);
+  const trimmed = trimMessages(updated, settings.maxMessages);
+  await saveMessages(trimmed);
 }
 
 // =============================================================================

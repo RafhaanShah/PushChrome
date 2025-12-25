@@ -351,50 +351,46 @@ src/
 | 7 | Create Message list popup | ✅ Done |
 | 8 | Create Send message page | ✅ Done |
 | 9 | Create Background worker | ✅ Done |
-| 9b | Context menu integration | 🔲 Pending |
+| 9b | Context menu integration | ✅ Done |
+| 9c | Device refresh (12h alarm + button) | ✅ Done |
+| 9d | Message storage improvements | ✅ Done |
+| 9e | Mark as read control | ✅ Done |
 | 10 | Add badge & notifications | ✅ Done (in Step 9) |
 | 11 | Polish UI & error handling | 🔲 Pending |
 | 12 | Testing & bug fixes | 🔲 Pending |
 
 ---
 
-## Planned: Context Menu Integration (Step 9b)
+### Step 9b: Context Menu Integration ✅
+**Completed:** 2024-12-25
 
-**Goal:** Right-click context menu to send page URLs or selected text via Pushover. **Sends happen directly in the background** - no popup opened. Device selection via nested submenu.
+**Updated Files:**
+- `manifest.json` - Added `contextMenus` permission
+- `src/background/service-worker.js` - Context menu creation and handling
+- `src/pages/settings.js` - Notifies service worker after credential validation
 
-### Menu Structure
+**Features:**
+- **Dynamic context menus**: Built on install and when devices/settings change
+- **Two menu types**: "Send page to Pushover" and "Send 'selected text...' to Pushover"
+- **Device submenus**: Nested submenu with "All devices" option plus individual devices
+- **Background sending**: Messages sent directly from service worker without opening any popup
+- **Toast notifications**: Success/failure shown via Chrome notifications (auto-dismiss after 5s)
+
+**Menu Structure:**
 ```
 Right-click on page → "Send page to Pushover" → [All devices, Device1, Device2...]
 Right-click on selection → "Send 'text...' to Pushover" → [All devices, Device1, Device2...]
 ```
 
-### Tasks
-
-1. **Update manifest.json**
-   - Add `contextMenus` permission
-
-2. **Create dynamic context menu** (in service-worker.js)
-   - `buildContextMenus()` function that creates parent menus and device submenus
-   - Called on `chrome.runtime.onInstalled`
-   - Only shown if send credentials (apiToken, userKey) are configured
-   - Rebuild when devices change via `chrome.storage.onChanged`
-
-3. **Handle context menu clicks - send in background**
-   - Parse menu ID to determine action type and target device
-   - For page: send page title as message, page URL as supplementary URL
-   - For selection: send selected text as message, page URL as supplementary
-   - Call `sendMessage()` API directly from service worker
-   - Show Chrome notification on success/failure
-
-4. **Rebuild menus on credential validation**
-   - When user validates credentials in settings, notify service worker
-   - Use `chrome.runtime.sendMessage({ action: 'rebuildContextMenus' })`
-   - Service worker listens and calls `buildContextMenus()`
-
-### No popup required
-- All sending happens in the service worker background
-- Success/failure shown via Chrome notifications
-- Much faster UX than opening a page
+**Implementation Details:**
+- `buildContextMenus()`: Creates parent menus and device submenus dynamically
+- Called on `chrome.runtime.onInstalled` and when devices/settings change
+- Only shown if send credentials (apiToken, userKey) are configured
+- `chrome.contextMenus.onClicked`: Parses menu ID to determine action and target device
+- For page: sends page title as message, page URL as supplementary URL
+- For selection: sends selected text as message, page URL as supplementary
+- Uses existing `showToastNotification()` for success/failure feedback
+- Settings page sends `rebuildContextMenus` message after credential validation
 
 ---
 
@@ -404,11 +400,60 @@ Right-click on selection → "Send 'text...' to Pushover" → [All devices, Devi
 - Icons are currently using a single placeholder image for all sizes
 - Common CSS includes basic button styles, form elements, and utility classes
 
+### Step 9c: Device Refresh ✅
+**Completed:** 2024-12-25
+
+**Updated Files:**
+- `src/background/service-worker.js` - Added device refresh alarm and handler
+- `src/pages/send.html` - Added refresh button next to device picker
+- `src/pages/send.js` - Handle refresh button click
+- `src/pages/send.css` - Refresh button styling with spin animation
+
+**Features:**
+- **Automatic refresh**: Device list refreshes every 12 hours via `refreshDevices` alarm
+- **Manual refresh**: Refresh button (↻) next to device dropdown on send page
+- **Visual feedback**: Button spins while refreshing
+- **Preserves selection**: Current device selection restored if still valid after refresh
+
+---
+
+### Step 9d: Message Storage Improvements ✅
+**Completed:** 2024-12-25
+
+**Updated Files:**
+- `src/lib/storage.js` - Improved message trimming logic
+- `src/pages/settings.html` - Added "None" option for max messages
+- `src/pages/settings.js` - Apply message limit on save
+
+**Features:**
+- **Never lose unread**: Unread messages are always preserved, only read messages count toward limit
+- **"None" option**: Setting maxMessages to 0 clears all read messages immediately
+- **Immediate application**: Message limit applied when settings saved and when messages marked as read
+- **Consolidated logic**: Extracted `trimMessages()` helper to reduce code duplication
+
+---
+
+### Step 9e: Mark as Read Control ✅
+**Completed:** 2024-12-25
+
+**Updated Files:**
+- `src/lib/storage.js` - Added `markAsReadOnOpen` setting (default: true)
+- `src/pages/settings.html` - Added "Mark messages as read on open" checkbox
+- `src/pages/settings.js` - Handle the new setting
+- `src/pages/messages.html` - Added "Mark all as read" button (envelope icon)
+- `src/pages/messages.js` - Conditional mark-as-read behavior
+
+**Features:**
+- **Setting toggle**: "Mark messages as read on open" checkbox in settings (default: enabled)
+- **Manual button**: When disabled, shows envelope icon button in message header
+- **Button visibility**: Only shown when there are unread messages
+- **Full functionality**: Clicking button marks all read, clears badge, dismisses notifications
+
+---
+
 ## Deferred Tasks (for Step 11 - Polish)
 
 - [ ] **Icon caching**: Implement Cache API caching for Pushover app icons (`getIconUrl` in api.js) per API guidelines
 - [ ] **Dark mode theme**: System preference detection, settings toggle, CSS custom properties
 - [ ] **Send-only mode**: Allow sending messages without login/device registration (no desktop license needed)
-- [ ] **Device list refresh**: Periodically refresh device list from API, store with timestamp
 - [ ] **Pop-out mode**: Open message list in standalone resizable window
-- [ ] **Soft-deleted message cleanup**: Background worker should call `purgeDeletedMessages()` periodically (e.g., on startup and daily)

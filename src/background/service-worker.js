@@ -9,7 +9,8 @@ import {
   purgeDeletedMessages,
   getVisibleMessages,
   getMessages,
-  saveMessages
+  saveMessages,
+  getDevices
 } from '../lib/storage.js';
 import { fetchMessages, deleteMessages, getIconUrl, sendMessage } from '../lib/api.js';
 
@@ -29,6 +30,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   await setupAlarms();
   await purgeDeletedMessages();
   await updateBadge();
+  await buildContextMenus();
 });
 
 chrome.runtime.onStartup.addListener(async () => {
@@ -81,6 +83,99 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     console.log('Cleanup alarm triggered');
     const purged = await purgeDeletedMessages();
     console.log(`Purged ${purged} deleted messages`);
+  }
+});
+
+// =============================================================================
+// Context Menu
+// =============================================================================
+
+async function buildContextMenus() {
+  await chrome.contextMenus.removeAll();
+  
+  const settings = await getSettings();
+  const devices = await getDevices();
+  
+  // Only show menus if send credentials are configured
+  if (!settings.apiToken || !settings.userKey) {
+    console.log('Context menus not created: missing send credentials');
+    return;
+  }
+  
+  // Parent menu for page URL
+  chrome.contextMenus.create({
+    id: 'send-page',
+    title: 'Pushover',
+    contexts: ['page']
+  });
+  
+  // Parent menu for selected text
+  chrome.contextMenus.create({
+    id: 'send-selection',
+    title: 'Send "%s" to Pushover',
+    contexts: ['selection']
+  });
+  
+  // Add device options under each parent
+  for (const parent of ['send-page', 'send-selection']) {
+    chrome.contextMenus.create({
+      id: `${parent}-all`,
+      parentId: parent,
+      title: 'All devices'
+    });
+    
+    if (devices.length > 0) {
+      chrome.contextMenus.create({
+        id: `${parent}-separator`,
+        parentId: parent,
+        type: 'separator'
+      });
+      
+      for (const device of devices) {
+        chrome.contextMenus.create({
+          id: `${parent}-${device}`,
+          parentId: parent,
+          title: device
+        });
+      }
+    }
+  }
+  
+  console.log(`Context menus created with ${devices.length} devices`);
+}
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  const settings = await getSettings();
+  const menuId = info.menuItemId;
+  
+  // Parse menu ID: "send-page-deviceName" or "send-selection-all"
+  const isPage = menuId.startsWith('send-page-');
+  const isSelection = menuId.startsWith('send-selection-');
+  
+  if (!isPage && !isSelection) return;
+  
+  const device = String(menuId).replace(/^send-(page|selection)-/, '');
+  
+  const params = {
+    token: settings.apiToken,
+    user: settings.userKey,
+    device: device === 'all' ? undefined : device
+  };
+  
+  if (isPage) {
+    params.message = tab.title || info.pageUrl;
+    params.url = info.pageUrl;
+  } else if (isSelection) {
+    params.message = info.selectionText;
+    params.url = info.pageUrl;
+    params.urlTitle = tab.title;
+  }
+  
+  try {
+    await sendMessage(params);
+    showToastNotification('Message Sent', `Sent to ${device === 'all' ? 'all devices' : device}`);
+  } catch (error) {
+    showToastNotification('Send Failed', error.message || 'Failed to send message');
   }
 });
 
@@ -211,12 +306,13 @@ async function showNotificationsForNewMessages(newCount) {
 
 async function showNotification(message) {
   const notificationId = `pushover-msg-${message.id}`;
+  const fallbackIcon = chrome.runtime.getURL('src/icons/icon-128.png');
   
   const options = {
     type: 'basic',
     title: message.title || message.app || 'Pushover',
     message: message.message || '',
-    iconUrl: getIconUrl(message.icon) || 'src/icons/icon-128.png',
+    iconUrl: getIconUrl(message.icon) || fallbackIcon,
     priority: getPriorityForNotification(message.priority),
     requireInteraction: message.priority >= 2 // Emergency messages stay visible
   };
@@ -232,7 +328,7 @@ async function showNotification(message) {
     await chrome.notifications.create(notificationId, options);
   } catch (error) {
     // Fallback without custom icon if it fails
-    options.iconUrl = 'src/icons/icon-128.png';
+    options.iconUrl = fallbackIcon;
     await chrome.notifications.create(notificationId, options);
   }
 }
@@ -323,6 +419,8 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   // Reconfigure alarms when settings change
   if (area === 'sync' && changes.settings) {
     await setupAlarms();
+    // Rebuild context menus if credentials changed
+    await buildContextMenus();
   }
   
   // Set up alarms when user logs in
@@ -332,6 +430,11 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
       // User just logged in, refresh messages
       await refreshMessages();
     }
+  }
+  
+  // Rebuild context menus when devices change
+  if (area === 'local' && changes.devices) {
+    await buildContextMenus();
   }
 });
 
@@ -370,6 +473,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'sendMessage') {
     handleSendMessage(request.params).then((result) => {
       sendResponse(result);
+    });
+    return true;
+  }
+  
+  if (request.action === 'rebuildContextMenus') {
+    buildContextMenus().then(() => {
+      sendResponse({ success: true });
     });
     return true;
   }
@@ -421,7 +531,7 @@ function showToastNotification(title, message) {
   
   chrome.notifications.create(notificationId, {
     type: 'basic',
-    iconUrl: 'src/icons/icon-128.png',
+    iconUrl: chrome.runtime.getURL('src/icons/icon-128.png'),
     title: title,
     message: message,
     priority: 0

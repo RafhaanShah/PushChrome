@@ -791,11 +791,10 @@ Right-click on selected text:
 - Useful for users who just want to push notifications without the desktop license
 - Settings page accessible directly from popup when not logged in
 
-### Device List Refresh
-- Periodically refresh the user's device list from `/1/users/validate.json`
-- Update stored devices on each refresh (for device dropdown in Send page)
-- Refresh on settings page load if devices are stale (e.g., > 24 hours old)
-- Store last refresh timestamp alongside device list
+### Device List Refresh ✅ DONE
+- ~~Periodically refresh the user's device list from `/1/users/validate.json`~~
+- ~~Update stored devices on each refresh (for device dropdown in Send page)~~
+- Implemented: 12-hour automatic refresh + manual refresh button on send page
 
 ### Pop-out Mode for Message List
 - Add button to open message list in a standalone window
@@ -828,12 +827,16 @@ Right-click on selected text:
 - Validate credentials before saving API token/user key (optional warning if invalid)
 - Update alarm interval immediately on refresh interval change
 
-### Soft-Deleted Message Cleanup
-- Messages are soft-deleted locally (marked with `_deletedAt` timestamp) rather than removed
-- This prevents re-fetching deleted messages from the server before `update_highest_message` syncs
-- Background worker should periodically call `storage.purgeDeletedMessages()` to clean up
-- Default: purge messages deleted more than 24 hours ago
-- Run cleanup on extension startup and periodically (e.g., daily)
+### Soft-Deleted Message Cleanup ✅ DONE
+- ~~Messages are soft-deleted locally (marked with `_deletedAt` timestamp) rather than removed~~
+- ~~Background worker should periodically call `storage.purgeDeletedMessages()` to clean up~~
+- Implemented: Daily cleanup alarm + cleanup on startup
+
+### Message Storage Improvements ✅ DONE
+- Unread messages are never trimmed - only read messages count toward maxMessages limit
+- Added "None" option (maxMessages=0) to clear all read messages immediately  
+- Message limit applied when settings saved and when messages marked as read
+- Optional "Mark as read on open" setting with manual mark-read button when disabled
 
 ### Verbose Logging Toggle
 - Add "Enable verbose logging" toggle in settings (default: off)

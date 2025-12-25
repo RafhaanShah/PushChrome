@@ -1,6 +1,6 @@
 // Pushover Chrome Extension - Settings Page
 import { validateCredentials } from '../lib/api.js';
-import { getSession, getSettings, saveSettings, saveDevices, clearAll } from '../lib/storage.js';
+import { getSession, getSettings, saveSettings, saveDevices, clearAll, applyMessageLimit } from '../lib/storage.js';
 import { $ } from '../lib/utils.js';
 
 let isLoggedIn = false;
@@ -19,6 +19,7 @@ const elements = {
   maxMessages: null,
   notificationsEnabled: null,
   badgeEnabled: null,
+  markAsReadOnOpen: null,
   saveBtn: null
 };
 
@@ -36,6 +37,7 @@ async function init() {
   elements.maxMessages = $('#max-messages');
   elements.notificationsEnabled = $('#notifications-enabled');
   elements.badgeEnabled = $('#badge-enabled');
+  elements.markAsReadOnOpen = $('#mark-as-read-on-open');
   elements.saveBtn = $('#save-btn');
 
   await loadAccountInfo();
@@ -69,6 +71,7 @@ async function loadSettings() {
   elements.maxMessages.value = String(settings.maxMessages);
   elements.notificationsEnabled.checked = settings.notificationsEnabled;
   elements.badgeEnabled.checked = settings.badgeEnabled;
+  elements.markAsReadOnOpen.checked = settings.markAsReadOnOpen;
 }
 
 function bindEvents() {
@@ -112,6 +115,9 @@ async function handleValidate() {
         await saveDevices(result.devices);
       }
       
+      // Notify service worker to rebuild context menus with new devices
+      chrome.runtime.sendMessage({ action: 'rebuildContextMenus' }).catch(() => {});
+      
       const deviceList = result.devices.length > 0 
         ? `Devices: ${result.devices.join(', ')}` 
         : 'No devices found';
@@ -136,10 +142,14 @@ async function handleSave() {
       refreshInterval: parseInt(elements.refreshInterval.value, 10),
       maxMessages: parseInt(elements.maxMessages.value, 10),
       notificationsEnabled: elements.notificationsEnabled.checked,
-      badgeEnabled: elements.badgeEnabled.checked
+      badgeEnabled: elements.badgeEnabled.checked,
+      markAsReadOnOpen: elements.markAsReadOnOpen.checked
     };
 
     await saveSettings(newSettings);
+    
+    // Apply message limit immediately
+    await applyMessageLimit();
 
     // Update alarm interval if service worker is active
     try {

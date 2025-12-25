@@ -139,6 +139,38 @@
   background: white;
 }
 
+/* Input with button (device picker + refresh) */
+.input-with-btn {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.input-with-btn select {
+  flex: 1;
+}
+
+.input-with-btn .icon-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+}
+
+.input-with-btn .refresh-icon {
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.input-with-btn .icon-btn.refreshing .refresh-icon {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Compact form labels */
 #send-form label {
   font-size: 13px;
