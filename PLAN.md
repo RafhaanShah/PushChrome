@@ -764,9 +764,53 @@ Right-click on selected text:
 
 ---
 
+## WebSocket Real-Time Connection ✅ DONE
+
+### Overview
+Optional instant message delivery via WebSocket connection to Pushover's streaming API. When enabled, messages arrive in real-time instead of polling.
+
+### Settings Integration
+- New refresh interval option: "Instant (WebSocket Streaming)" with value `-1`
+- WebSocket mode disables periodic polling alarm
+- Switching modes automatically connects/disconnects WebSocket
+
+### WebSocket Protocol
+```
+Connection: wss://client.pushover.net/push
+Login: "login:{deviceId}:{secret}\n"
+
+Server Messages:
+  # - Keep-alive (every 30s), no response needed
+  ! - New message available, trigger sync
+  R - Reload request, reconnect
+  E - Permanent error, don't auto-reconnect
+  A - Another session took over, don't auto-reconnect
+```
+
+### Reconnection Handling
+| Scenario | Behavior |
+|----------|----------|
+| Connection drops / loses internet | Auto-reconnect after 30s delay |
+| Server sends `R` (reload) | Immediate reconnect |
+| Browser restarts | `onStartup` reconnects |
+| Service worker terminated | Keepalive alarm (1 min) triggers `ensureWebSocketConnected()` |
+| Permanent error (`E`/`A`) | No auto-reconnect, user must re-login |
+| User logs out | Clean disconnect, disable keepalive alarm |
+| Setting changed away from WebSocket | Clean disconnect |
+
+### Implementation Files
+- `src/lib/api.js`: `createWebSocketConnection()` - WebSocket factory with event handlers
+- `src/background/service-worker.js`:
+  - `connectWebSocket()` - Establishes connection if WebSocket mode enabled
+  - `disconnectWebSocket()` - Clean shutdown with alarm cleanup
+  - `ensureWebSocketConnected()` - Called by keepalive alarm to restore connection
+  - `setupWebSocketKeepalive()` - Manages 1-minute keepalive alarm
+- `src/pages/settings.html`: Added "Instant (WebSocket Streaming)" option
+
+---
+
 ## Future Enhancements (Out of Scope)
 
-- [ ] WebSocket real-time connection (`wss://client.pushover.net/push`)
 - [ ] Message search/filter
 - [ ] Quick reply from notification
 - [ ] Keyboard shortcuts

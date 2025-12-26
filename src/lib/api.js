@@ -234,4 +234,61 @@ export function getSoundUrl(soundName) {
   return `https://api.pushover.net/sounds/${soundName}.mp3`;
 }
 
+// =============================================================================
+// WebSocket API (for real-time message notification)
+// =============================================================================
+
+const WEBSOCKET_URL = 'wss://client.pushover.net/push';
+
+export function createWebSocketConnection(deviceId, secret, handlers = {}) {
+  const { onMessage, onReload, onError, onClose, onOpen } = handlers;
+  
+  const ws = new WebSocket(WEBSOCKET_URL);
+  
+  ws.onopen = () => {
+    const loginMessage = `login:${deviceId}:${secret}\n`;
+    ws.send(loginMessage);
+    onOpen?.();
+  };
+  
+  ws.onmessage = async (event) => {
+    const data = event.data instanceof Blob ? await event.data.text() : event.data;
+    
+    if (data === '#') {
+      return;
+    }
+    
+    if (data === '!') {
+      onMessage?.();
+      return;
+    }
+    
+    if (data === 'R') {
+      onReload?.();
+      return;
+    }
+    
+    if (data === 'E') {
+      onError?.('permanent', 'Permanent error occurred. Please re-login.');
+      return;
+    }
+    
+    if (data === 'A') {
+      onError?.('session_conflict', 'Device logged in from another session.');
+      return;
+    }
+  };
+  
+  ws.onerror = (error) => {
+    console.error('WebSocket error:', error);
+    onError?.('connection', 'WebSocket connection error');
+  };
+  
+  ws.onclose = (event) => {
+    onClose?.(event.code, event.reason);
+  };
+  
+  return ws;
+}
+
 export { PushoverAPIError };

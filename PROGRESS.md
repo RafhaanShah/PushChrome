@@ -355,6 +355,7 @@ src/
 | 9c | Device refresh (12h alarm + button) | ✅ Done |
 | 9d | Message storage improvements | ✅ Done |
 | 9e | Mark as read control | ✅ Done |
+| 9f | WebSocket real-time connection | ✅ Done |
 | 10 | Add badge & notifications | ✅ Done (in Step 9) |
 | 11 | Polish UI & error handling | 🔲 Pending |
 | 12 | Testing & bug fixes | 🔲 Pending |
@@ -448,6 +449,39 @@ Right-click on selection → "Send 'text...' to Pushover" → [All devices, Devi
 - **Manual button**: When disabled, shows envelope icon button in message header
 - **Button visibility**: Only shown when there are unread messages
 - **Full functionality**: Clicking button marks all read, clears badge, dismisses notifications
+
+---
+
+### Step 9f: WebSocket Real-Time Connection ✅
+**Completed:** 2024-12-26
+
+**Updated Files:**
+- `src/lib/api.js` - Added `createWebSocketConnection()` function
+- `src/background/service-worker.js` - WebSocket management and keepalive
+- `src/pages/settings.html` - Added "Instant (WebSocket Streaming)" option
+
+**Features:**
+- **Optional WebSocket mode**: New "Instant (WebSocket Streaming)" option in refresh interval dropdown
+- **Real-time delivery**: Messages arrive instantly via `wss://client.pushover.net/push`
+- **Protocol handling**: Parses server messages (`#` keepalive, `!` new message, `R` reload, `E`/`A` errors)
+- **Blob data handling**: Converts WebSocket Blob data to text for proper parsing
+
+**Reconnection Logic:**
+- **Connection drops**: Auto-reconnect after 30 second delay
+- **Server reload request (`R`)**: Immediate reconnect
+- **Browser/service worker restart**: Keepalive alarm fires every 1 minute, reconnects if needed
+- **Permanent errors (`E`/`A`)**: No auto-reconnect, requires user re-login
+
+**Service Worker Integration:**
+- `connectWebSocket()` - Checks settings, establishes connection if WebSocket mode enabled
+- `disconnectWebSocket()` - Clean shutdown with keepalive alarm cleanup
+- `ensureWebSocketConnected()` - Called by keepalive alarm to restore connection after SW restart
+- `setupWebSocketKeepalive(enabled)` - Manages 1-minute periodic alarm for connection monitoring
+
+**Settings Integration:**
+- Refresh interval value `-1` enables WebSocket mode
+- Periodic refresh alarm disabled when WebSocket active
+- Settings change triggers connect/disconnect as appropriate
 
 ---
 
