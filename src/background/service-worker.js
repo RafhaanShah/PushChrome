@@ -314,24 +314,29 @@ async function buildContextMenus() {
   
   // Add device options under each parent
   for (const parent of ['send-page', 'send-selection']) {
+    const contexts = parent === 'send-selection' ? ['selection'] : ['page'];
+    
     chrome.contextMenus.create({
       id: `${parent}-all`,
       parentId: parent,
-      title: 'All devices'
+      title: 'All devices',
+      contexts
     });
     
     if (devices.length > 0) {
       chrome.contextMenus.create({
         id: `${parent}-separator`,
         parentId: parent,
-        type: 'separator'
+        type: 'separator',
+        contexts
       });
       
       for (const device of devices) {
         chrome.contextMenus.create({
           id: `${parent}-${device}`,
           parentId: parent,
-          title: device
+          title: device,
+          contexts
         });
       }
     }
@@ -361,10 +366,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (isPage) {
     params.message = tab.title || info.pageUrl;
     params.url = info.pageUrl;
+    params.urlTitle = info.pageUrl;
   } else if (isSelection) {
     params.message = info.selectionText;
-    params.url = info.pageUrl;
-    params.urlTitle = tab.title;
   }
   
   try {
