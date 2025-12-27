@@ -412,12 +412,9 @@ async function refreshMessages(options = {}) {
       
       logger.debug(`Fetched ${messages.length} messages, ${newCount} new`);
       
-      // Show notifications for new messages (unless popup is open)
+      // Show notifications for new messages
       if (newCount > 0 && !skipNotifications) {
-        const popupOpen = await isMessagesPageOpen();
-        if (!popupOpen) {
-          await showNotificationsForNewMessages(newCount);
-        }
+        await showNotificationsForNewMessages(newCount);
       }
       
       // Notify any open popup to refresh display
@@ -426,12 +423,9 @@ async function refreshMessages(options = {}) {
       }
     }
     
-    // Only update badge if popup is not open (popup handles its own badge)
+    // Update badge
     if (!skipNotifications) {
-      const popupOpen = await isMessagesPageOpen();
-      if (!popupOpen) {
-        await updateBadge();
-      }
+      await updateBadge();
     }
     
     return { success: true, newCount };
@@ -441,13 +435,7 @@ async function refreshMessages(options = {}) {
   }
 }
 
-async function isMessagesPageOpen() {
-  const views = await chrome.runtime.getContexts({
-    contextTypes: ['TAB', 'POPUP']
-  });
-  
-  return views.some(v => v.documentUrl?.includes('messages.html'));
-}
+
 
 function notifyPopupOfNewMessages() {
   // Send message to any open messages page to refresh
