@@ -13,6 +13,7 @@ import {
   getDevices
 } from '../lib/storage.js';
 import { fetchMessages, deleteMessages, getIconUrl, sendMessage, createWebSocketConnection } from '../lib/api.js';
+import { logger } from '../lib/logger.js';
 
 const ALARM_NAME = 'refreshMessages';
 const CLEANUP_ALARM_NAME = 'cleanupMessages';
@@ -29,7 +30,7 @@ let websocketReconnectTimeout = null;
 // =============================================================================
 
 chrome.runtime.onInstalled.addListener(async (details) => {
-  console.log('Pushover extension installed/updated:', details.reason);
+  logger.info('Extension installed/updated:', details.reason);
   
   await setupAlarms();
   await purgeDeletedMessages();
@@ -39,7 +40,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 });
 
 chrome.runtime.onStartup.addListener(async () => {
-  console.log('Browser started, initializing Pushover extension');
+  logger.info('Browser started, initializing extension');
   
   await setupAlarms();
   await purgeDeletedMessages();
@@ -67,11 +68,11 @@ async function setupAlarms() {
     chrome.alarms.create(ALARM_NAME, {
       periodInMinutes: settings.refreshInterval
     });
-    console.log(`Refresh alarm set for every ${settings.refreshInterval} minutes`);
+    logger.info(`Refresh alarm set for every ${settings.refreshInterval} minutes`);
   } else if (settings.refreshInterval === -1) {
-    console.log('Using WebSocket for instant refresh');
+    logger.info('Using WebSocket for instant refresh');
   } else if (settings.refreshInterval === 0) {
-    console.log('Auto-refresh disabled (manual only)');
+    logger.info('Auto-refresh disabled (manual only)');
   }
   
   // Daily cleanup alarm for soft-deleted messages (always enabled)
@@ -86,12 +87,12 @@ async function setupAlarms() {
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === ALARM_NAME) {
-    console.log('Refresh alarm triggered');
+    logger.debug('Refresh alarm triggered');
     await refreshMessages();
   } else if (alarm.name === CLEANUP_ALARM_NAME) {
-    console.log('Cleanup alarm triggered');
+    logger.debug('Cleanup alarm triggered');
     const purged = await purgeDeletedMessages();
-    console.log(`Purged ${purged} deleted messages`);
+    logger.debug(`Purged ${purged} deleted messages`);
   } else if (alarm.name === WEBSOCKET_KEEPALIVE_ALARM) {
     // Service worker woke up - ensure WebSocket is connected
     await ensureWebSocketConnected();
@@ -107,7 +108,7 @@ async function connectWebSocket() {
   
   // Only use WebSocket if instant refresh is enabled
   if (settings.refreshInterval !== -1) {
-    console.log('WebSocket disabled (not using instant refresh mode)');
+    logger.debug('WebSocket disabled (not using instant refresh mode)');
     await disconnectWebSocket();
     return;
   }
@@ -115,34 +116,34 @@ async function connectWebSocket() {
   const session = await getSession();
   
   if (!session?.secret || !session?.deviceId) {
-    console.log('Not logged in, skipping WebSocket connection');
+    logger.debug('Not logged in, skipping WebSocket connection');
     return;
   }
   
   await disconnectWebSocket();
   
-  console.log('Connecting to Pushover WebSocket...');
+  logger.info('Connecting to Pushover WebSocket...');
   
   // Enable keepalive alarm to handle service worker restarts
   await setupWebSocketKeepalive(true);
   
   websocket = createWebSocketConnection(session.deviceId, session.secret, {
     onOpen: async () => {
-      console.log('WebSocket connected and logged in');
+      logger.info('WebSocket connected and logged in');
     },
     
     onMessage: async () => {
-      console.log('WebSocket: New message notification received');
+      logger.debug('WebSocket: New message notification received');
       await refreshMessages();
     },
     
     onReload: () => {
-      console.log('WebSocket: Reload requested, reconnecting...');
+      logger.info('WebSocket: Reload requested, reconnecting...');
       scheduleWebSocketReconnect();
     },
     
     onError: async (type, message) => {
-      console.error(`WebSocket error (${type}):`, message);
+      logger.error(`WebSocket error (${type}):`, message);
       if (type === 'permanent' || type === 'session_conflict') {
         // Don't auto-reconnect for permanent errors
         await disconnectWebSocket();
@@ -150,7 +151,7 @@ async function connectWebSocket() {
     },
     
     onClose: (code, reason) => {
-      console.log(`WebSocket closed: ${code} ${reason}`);
+      logger.info(`WebSocket closed: ${code} ${reason}`);
       websocket = null;
       // Auto-reconnect unless it was a clean close
       if (code !== 1000) {
@@ -180,7 +181,7 @@ function scheduleWebSocketReconnect() {
     return; // Already scheduled
   }
   
-  console.log(`Scheduling WebSocket reconnect in ${WEBSOCKET_RECONNECT_DELAY / 1000}s`);
+  logger.debug(`Scheduling WebSocket reconnect in ${WEBSOCKET_RECONNECT_DELAY / 1000}s`);
   websocketReconnectTimeout = setTimeout(async () => {
     websocketReconnectTimeout = null;
     await connectWebSocket();
@@ -194,11 +195,11 @@ async function ensureWebSocketConnected() {
     return; // WebSocket mode not enabled
   }
 
-  console.log('Checking WebSocket status: ', websocket ? websocket.readyState : 'not connected');
+  logger.debug('Checking WebSocket status:', websocket ? websocket.readyState : 'not connected');
   
   // If WebSocket is not connected, reconnect
   if (!websocket || (websocket.readyState !== WebSocket.OPEN && websocket.readyState !== WebSocket.CONNECTING)) {
-    console.log('WebSocket not connected, reconnecting...');
+    logger.debug('WebSocket not connected, reconnecting...');
     await connectWebSocket();
   }
 }
@@ -212,7 +213,7 @@ async function setupWebSocketKeepalive(enabled) {
     chrome.alarms.create(WEBSOCKET_KEEPALIVE_ALARM, {
       periodInMinutes: 1
     });
-    console.log('WebSocket keepalive alarm enabled');
+    logger.debug('WebSocket keepalive alarm enabled');
   }
 }
 
@@ -228,7 +229,7 @@ async function buildContextMenus() {
   
   // Only show menus if send credentials are configured
   if (!settings.apiToken || !settings.userKey) {
-    console.log('Context menus not created: missing send credentials');
+    logger.debug('Context menus not created: missing send credentials');
     return;
   }
   
@@ -271,7 +272,7 @@ async function buildContextMenus() {
     }
   }
   
-  console.log(`Context menus created with ${devices.length} devices`);
+  logger.debug(`Context menus created with ${devices.length} devices`);
 }
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
@@ -320,7 +321,7 @@ async function refreshMessages(options = {}) {
   if (checkDebounce) {
     const now = Date.now();
     if ((now - lastRefreshTime) < DEBOUNCE_MS) {
-      console.log('Refresh debounced');
+      logger.debug('Refresh debounced');
       return { debounced: true };
     }
   }
@@ -328,7 +329,7 @@ async function refreshMessages(options = {}) {
   const session = await getSession();
   
   if (!session?.secret || !session?.deviceId) {
-    console.log('Not logged in, skipping refresh');
+    logger.debug('Not logged in, skipping refresh');
     return { error: 'not_logged_in' };
   }
   
@@ -344,7 +345,7 @@ async function refreshMessages(options = {}) {
       const highestId = Math.max(...messages.map(m => m.id));
       await deleteMessages(session.secret, session.deviceId, highestId);
       
-      console.log(`Fetched ${messages.length} messages, ${newCount} new`);
+      logger.debug(`Fetched ${messages.length} messages, ${newCount} new`);
       
       // Show notifications for new messages (unless popup is open)
       if (newCount > 0 && !skipNotifications) {
@@ -370,7 +371,7 @@ async function refreshMessages(options = {}) {
     
     return { success: true, newCount };
   } catch (error) {
-    console.error('Failed to refresh messages:', error);
+    logger.error('Failed to refresh messages:', error);
     return { error: error.message };
   }
 }
@@ -529,7 +530,7 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
           await acknowledgeEmergency(session.secret, message.receipt);
           chrome.notifications.clear(notificationId);
         } catch (error) {
-          console.error('Failed to acknowledge emergency:', error);
+          logger.error('Failed to acknowledge emergency:', error);
         }
       }
     }
@@ -692,4 +693,4 @@ async function clearAllMessageNotifications() {
   }
 }
 
-console.log('Pushover service worker loaded');
+logger.info('Service worker loaded');

@@ -1,6 +1,7 @@
 // Pushover Chrome Extension - Send Message Page
 import { getSettings, getDevices, getSendPreferences, saveSendPreferences } from '../lib/storage.js';
 import { $ } from '../lib/utils.js';
+import { logger } from '../lib/logger.js';
 
 const elements = {
   backBtn: null,
@@ -137,7 +138,7 @@ async function handleRefreshDevices() {
       }
     }
   } catch (error) {
-    console.error('Failed to refresh devices:', error);
+    logger.error('Failed to refresh devices:', error);
   } finally {
     btn.classList.remove('refreshing');
     btn.disabled = false;

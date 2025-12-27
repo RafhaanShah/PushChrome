@@ -558,10 +558,9 @@ The Pushover Open Client API requires a multi-step authentication process:
 | 6 | Create Settings page | Steps 2, 3, 5 | 45 min |
 | 7 | Create Message list popup | Steps 2, 3, 5 | 1 hr |
 | 8 | Create Send message page | Steps 2, 3, 6 | 45 min |
-| 9 | Create Background worker | Steps 2, 3 | 1 hr |
-| 10 | Add badge & notifications | Step 9 | 30 min |
-| 11 | Polish UI & error handling | All | 1 hr |
-| 12 | Testing & bug fixes | All | 1 hr |
+| 9 | Create Background worker, badge & notifications | Steps 2, 3 | 1 hr |
+| 10 | Polish UI & error handling | All | 1 hr |
+| 11 | Testing & bug fixes | All | 1 hr |
 
 **Total Estimated Time: ~9 hours**
 
@@ -703,7 +702,7 @@ Right-click on selected text:
    
    chrome.runtime.onInstalled.addListener(buildContextMenus);
    
-   // Rebuild menus when devices are updated
+   // Rebuild menus whefn devices are updated
    chrome.storage.onChanged.addListener((changes, area) => {
      if (area === 'local' && changes.devices) {
        buildContextMenus();

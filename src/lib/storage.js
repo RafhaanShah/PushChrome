@@ -17,7 +17,8 @@ const DEFAULT_SETTINGS = {
   notificationsEnabled: true,
   badgeEnabled: true,
   maxMessages: 50,
-  markAsReadOnOpen: true
+  markAsReadOnOpen: true,
+  verboseLogging: false
 };
 
 // =============================================================================

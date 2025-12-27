@@ -1,6 +1,8 @@
 // Pushover Chrome Extension - API Wrapper
 // Handles all communication with Pushover API
 
+import { logger } from './logger.js';
+
 const API_BASE = 'https://api.pushover.net/1';
 
 class PushoverAPIError extends Error {
@@ -280,7 +282,7 @@ export function createWebSocketConnection(deviceId, secret, handlers = {}) {
   };
   
   ws.onerror = (error) => {
-    console.error('WebSocket error:', error);
+    logger.error('WebSocket error:', error);
     onError?.('connection', 'WebSocket connection error');
   };
   

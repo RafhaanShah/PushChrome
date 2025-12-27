@@ -2,6 +2,7 @@
 import { validateCredentials } from '../lib/api.js';
 import { getSession, getSettings, saveSettings, saveDevices, clearAll, applyMessageLimit } from '../lib/storage.js';
 import { $ } from '../lib/utils.js';
+import { logger } from '../lib/logger.js';
 
 let isLoggedIn = false;
 
@@ -20,6 +21,7 @@ const elements = {
   notificationsEnabled: null,
   badgeEnabled: null,
   markAsReadOnOpen: null,
+  verboseLogging: null,
   saveBtn: null
 };
 
@@ -38,6 +40,7 @@ async function init() {
   elements.notificationsEnabled = $('#notifications-enabled');
   elements.badgeEnabled = $('#badge-enabled');
   elements.markAsReadOnOpen = $('#mark-as-read-on-open');
+  elements.verboseLogging = $('#verbose-logging');
   elements.saveBtn = $('#save-btn');
 
   await loadAccountInfo();
@@ -72,6 +75,7 @@ async function loadSettings() {
   elements.notificationsEnabled.checked = settings.notificationsEnabled;
   elements.badgeEnabled.checked = settings.badgeEnabled;
   elements.markAsReadOnOpen.checked = settings.markAsReadOnOpen;
+  elements.verboseLogging.checked = settings.verboseLogging;
 }
 
 function bindEvents() {
@@ -143,7 +147,8 @@ async function handleSave() {
       maxMessages: parseInt(elements.maxMessages.value, 10),
       notificationsEnabled: elements.notificationsEnabled.checked,
       badgeEnabled: elements.badgeEnabled.checked,
-      markAsReadOnOpen: elements.markAsReadOnOpen.checked
+      markAsReadOnOpen: elements.markAsReadOnOpen.checked,
+      verboseLogging: elements.verboseLogging.checked
     };
 
     await saveSettings(newSettings);
@@ -160,7 +165,7 @@ async function handleSave() {
         });
       }
     } catch (e) {
-      console.warn('Could not update alarm:', e);
+      logger.error('Could not update alarm:', e);
     }
 
     showSaveSuccess();

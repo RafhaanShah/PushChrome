@@ -3,6 +3,7 @@
 import * as storage from '../lib/storage.js';
 import * as api from '../lib/api.js';
 import { $, escapeHtml, formatRelativeTime, getPriorityClass, getPriorityLabel, linkifyText } from '../lib/utils.js';
+import { logger } from '../lib/logger.js';
 
 let isRefreshing = false;
 let settings = null;
@@ -262,7 +263,7 @@ async function refreshMessages(checkDebounce = false) {
     }
 
   } catch (err) {
-    console.error('Refresh error:', err);
+    logger.error('Refresh error:', err);
     showStatus('Refresh failed', true);
   } finally {
     isRefreshing = false;
