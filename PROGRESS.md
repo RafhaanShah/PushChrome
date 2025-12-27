@@ -510,9 +510,29 @@ Right-click on selection → "Send 'text...' to Pushover" → [All devices, Devi
 
 ---
 
+### Step 10b: Icon Caching ✅
+**Completed:** 2024-12-27
+
+**Updated Files:**
+- `src/background/service-worker.js` - Added icon caching for notifications
+
+**Features:**
+- **Cache API storage**: Icons cached in `pushover-icons` cache for offline availability
+- **Automatic fetch & cache**: Icons fetched and cached on first notification display
+- **Cache cleanup**: Expired icons (>30 days) cleaned up daily alongside message purge
+- **Timestamp tracking**: Custom `X-Cached-At` header tracks when each icon was cached
+- **Graceful fallback**: Returns URL on cache errors, lets notification handle failure
+
+**Implementation:**
+- `getCachedIconUrl(iconName)` - Checks cache, fetches if missing, returns URL
+- `cleanupIconCache()` - Removes icons older than 30 days
+- Cleanup runs on daily `cleanupMessages` alarm
+
+---
+
 ## Deferred Tasks (for Step 11 - Polish)
 
-- [ ] **Icon caching**: Implement Cache API caching for Pushover app icons (`getIconUrl` in api.js) per API guidelines
+- [x] **Icon caching**: Implement Cache API caching for Pushover app icons per API guidelines
 - [ ] **Dark mode theme**: System preference detection, settings toggle, CSS custom properties
 - [ ] **Send-only mode**: Allow sending messages without login/device registration (no desktop license needed)
 - [ ] **Pop-out mode**: Open message list in standalone resizable window

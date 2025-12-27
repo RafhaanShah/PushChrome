@@ -12,7 +12,7 @@ import {
   saveMessages,
   getDevices
 } from '../lib/storage.js';
-import { fetchMessages, deleteMessages, getIconUrl, sendMessage, createWebSocketConnection } from '../lib/api.js';
+import { fetchMessages, deleteMessages, sendMessage, createWebSocketConnection } from '../lib/api.js';
 import { logger } from '../lib/logger.js';
 
 const ALARM_NAME = 'refreshMessages';
@@ -20,10 +20,74 @@ const CLEANUP_ALARM_NAME = 'cleanupMessages';
 const WEBSOCKET_KEEPALIVE_ALARM = 'websocketKeepalive';
 const DEBOUNCE_MS = 60000; // 1 minute
 const WEBSOCKET_RECONNECT_DELAY = 30000; // 30 seconds
+const ICON_CACHE_NAME = 'pushover-icons';
+const ICON_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 let lastRefreshTime = 0;
 let websocket = null;
 let websocketReconnectTimeout = null;
+
+// =============================================================================
+// Icon Caching
+// =============================================================================
+
+async function getCachedIconUrl(iconName) {
+  if (!iconName) return null;
+  
+  const iconUrl = `https://api.pushover.net/icons/${iconName}.png`;
+  
+  try {
+    const cache = await caches.open(ICON_CACHE_NAME);
+    const cached = await cache.match(iconUrl);
+    
+    if (cached) {
+      logger.debug('Icon cache hit:', iconName);
+      return iconUrl;
+    }
+    
+    // Fetch and cache the icon
+    logger.debug('Icon cache miss, fetching:', iconName);
+    const response = await fetch(iconUrl);
+    if (response.ok) {
+      // Clone response and add timestamp header for cache cleanup
+      const headers = new Headers(response.headers);
+      headers.set('X-Cached-At', Date.now().toString());
+      const cachedResponse = new Response(await response.blob(), { headers });
+      await cache.put(iconUrl, cachedResponse);
+    }
+    return iconUrl;
+  } catch (error) {
+    logger.warn('Icon cache error:', error);
+    return iconUrl; // Return URL anyway, let notification handle failure
+  }
+}
+
+async function cleanupIconCache() {
+  try {
+    const cache = await caches.open(ICON_CACHE_NAME);
+    const keys = await cache.keys();
+    const now = Date.now();
+    let cleaned = 0;
+    
+    for (const request of keys) {
+      const response = await cache.match(request);
+      const cachedAt = response?.headers.get('X-Cached-At');
+      
+      if (cachedAt && (now - parseInt(cachedAt, 10)) > ICON_CACHE_MAX_AGE_MS) {
+        await cache.delete(request);
+        cleaned++;
+      }
+    }
+    
+    if (cleaned > 0) {
+      logger.info(`Cleaned ${cleaned} expired icons from cache`);
+    }
+    return cleaned;
+  } catch (error) {
+    logger.warn('Icon cache cleanup error:', error);
+    return 0;
+  }
+}
 
 // =============================================================================
 // Initialization
@@ -92,7 +156,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   } else if (alarm.name === CLEANUP_ALARM_NAME) {
     logger.debug('Cleanup alarm triggered');
     const purged = await purgeDeletedMessages();
-    logger.debug(`Purged ${purged} deleted messages`);
+    const iconsCleaned = await cleanupIconCache();
+    logger.debug(`Purged ${purged} deleted messages, ${iconsCleaned} expired icons`);
   } else if (alarm.name === WEBSOCKET_KEEPALIVE_ALARM) {
     // Service worker woke up - ensure WebSocket is connected
     await ensureWebSocketConnected();
@@ -439,11 +504,14 @@ async function showNotification(message) {
   const notificationId = `pushover-msg-${message.id}`;
   const fallbackIcon = chrome.runtime.getURL('src/icons/icon-128.png');
   
+  // Pre-cache icon for notification (ensures it's available offline too)
+  const iconUrl = await getCachedIconUrl(message.icon) || fallbackIcon;
+  
   const options = {
     type: 'basic',
     title: message.title || message.app || 'Pushover',
     message: message.message || '',
-    iconUrl: getIconUrl(message.icon) || fallbackIcon,
+    iconUrl,
     priority: getPriorityForNotification(message.priority),
     requireInteraction: message.priority >= 2 // Emergency messages stay visible
   };
