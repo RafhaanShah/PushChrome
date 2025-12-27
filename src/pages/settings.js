@@ -17,6 +17,7 @@ const elements = {
   validateBtn: null,
   validateResult: null,
   refreshInterval: null,
+  deviceRefreshInterval: null,
   maxMessages: null,
   notificationsEnabled: null,
   badgeEnabled: null,
@@ -36,6 +37,7 @@ async function init() {
   elements.validateBtn = $('#validate-btn');
   elements.validateResult = $('#validate-result');
   elements.refreshInterval = $('#refresh-interval');
+  elements.deviceRefreshInterval = $('#device-refresh-interval');
   elements.maxMessages = $('#max-messages');
   elements.notificationsEnabled = $('#notifications-enabled');
   elements.badgeEnabled = $('#badge-enabled');
@@ -71,6 +73,7 @@ async function loadSettings() {
   elements.apiToken.value = settings.apiToken || '';
   elements.userKey.value = settings.userKey || elements.userKey.value || '';
   elements.refreshInterval.value = String(settings.refreshInterval);
+  elements.deviceRefreshInterval.value = String(settings.deviceRefreshInterval);
   elements.maxMessages.value = String(settings.maxMessages);
   elements.notificationsEnabled.checked = settings.notificationsEnabled;
   elements.badgeEnabled.checked = settings.badgeEnabled;
@@ -144,6 +147,7 @@ async function handleSave() {
       apiToken: elements.apiToken.value.trim(),
       userKey: elements.userKey.value.trim(),
       refreshInterval: parseInt(elements.refreshInterval.value, 10),
+      deviceRefreshInterval: parseInt(elements.deviceRefreshInterval.value, 10),
       maxMessages: parseInt(elements.maxMessages.value, 10),
       notificationsEnabled: elements.notificationsEnabled.checked,
       badgeEnabled: elements.badgeEnabled.checked,

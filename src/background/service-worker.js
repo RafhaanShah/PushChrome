@@ -20,6 +20,7 @@ import { fetchMessages, deleteMessages, sendMessage, createWebSocketConnection, 
 import { logger } from '../lib/logger.js';
 
 const ALARM_NAME = 'refreshMessages';
+const DEVICE_REFRESH_ALARM_NAME = 'refreshDevices';
 const CLEANUP_ALARM_NAME = 'cleanupMessages';
 const WEBSOCKET_KEEPALIVE_ALARM = 'websocketKeepalive';
 const DEBOUNCE_MS = 60000; // 1 minute
@@ -144,6 +145,19 @@ async function setupAlarms() {
     logger.info('Auto-refresh disabled (manual only)');
   }
   
+  // Clear existing device refresh alarm
+  await chrome.alarms.clear(DEVICE_REFRESH_ALARM_NAME);
+  
+  // Set up device refresh alarm if send credentials are configured and interval > 0
+  if (settings.apiToken && settings.userKey && settings.deviceRefreshInterval > 0) {
+    chrome.alarms.create(DEVICE_REFRESH_ALARM_NAME, {
+      periodInMinutes: settings.deviceRefreshInterval
+    });
+    logger.info(`Device refresh alarm set for every ${settings.deviceRefreshInterval} minutes`);
+  } else if (settings.deviceRefreshInterval === 0) {
+    logger.info('Device auto-refresh disabled (manual only)');
+  }
+  
   // Daily cleanup alarm for soft-deleted messages (always enabled)
   chrome.alarms.get(CLEANUP_ALARM_NAME, (existing) => {
     if (!existing) {
@@ -158,6 +172,9 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === ALARM_NAME) {
     logger.debug('Refresh alarm triggered');
     await refreshMessages();
+  } else if (alarm.name === DEVICE_REFRESH_ALARM_NAME) {
+    logger.debug('Device refresh alarm triggered');
+    await refreshDevices();
   } else if (alarm.name === CLEANUP_ALARM_NAME) {
     logger.debug('Cleanup alarm triggered');
     const purged = await purgeDeletedMessages();

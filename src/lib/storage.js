@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   apiToken: '',
   userKey: '',
   refreshInterval: 5,
+  deviceRefreshInterval: 60,
   notificationsEnabled: true,
   badgeEnabled: true,
   maxMessages: 50,
