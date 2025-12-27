@@ -2,6 +2,7 @@
 import { validateCredentials } from '../lib/api.js';
 import { getSession, getSettings, saveSettings, saveDevices, clearAll, applyMessageLimit } from '../lib/storage.js';
 import { $ } from '../lib/utils.js';
+import { initTabMode } from '../lib/tab-mode.js';
 import { logger } from '../lib/logger.js';
 
 let isLoggedIn = false;
@@ -27,6 +28,7 @@ const elements = {
 };
 
 async function init() {
+  initTabMode();
   elements.backBtn = $('#back-btn');
   elements.deviceName = $('#device-name');
   elements.userId = $('#user-id');

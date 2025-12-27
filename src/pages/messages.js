@@ -2,7 +2,8 @@
 
 import * as storage from '../lib/storage.js';
 import * as api from '../lib/api.js';
-import { $, escapeHtml, formatRelativeTime, getPriorityClass, getPriorityLabel, linkifyText } from '../lib/utils.js';
+import { $, escapeHtml, formatRelativeTime, getPriorityClass, getPriorityLabel, linkifyText, isPopupMode, openInTab } from '../lib/utils.js';
+import { initTabMode } from '../lib/tab-mode.js';
 import { logger } from '../lib/logger.js';
 
 let isRefreshing = false;
@@ -11,8 +12,16 @@ let settings = null;
 async function init() {
   setupEventListeners();
   setupMessageListener();
+  setupPopoutMode();
   await checkErrorState();
   await checkAuthAndLoadMessages();
+}
+
+function setupPopoutMode() {
+  initTabMode();
+  if (!isPopupMode()) {
+    $('#popout-btn').classList.add('hidden');
+  }
 }
 
 function setupEventListeners() {
@@ -23,6 +32,8 @@ function setupEventListeners() {
   $('#send-btn').addEventListener('click', () => {
     window.location.href = 'send.html';
   });
+
+  $('#popout-btn').addEventListener('click', openInTab);
 
   $('#refresh-btn').addEventListener('click', () => refreshMessages(false)); // Manual: no debounce
   $('#login-btn')?.addEventListener('click', () => {
@@ -43,9 +54,6 @@ function setupMessageListener() {
       // Reload and display messages
       loadAndDisplayMessages().then(() => {
         updateMarkReadButton();
-        if (settings?.markAsReadOnOpen) {
-          markMessagesAsRead();
-        }
       });
     }
     
@@ -316,14 +324,10 @@ async function handleMarkAllRead() {
 function updateMarkReadButton() {
   const btn = $('#mark-read-btn');
   
-  // Only show if markAsReadOnOpen is disabled AND there are unread messages
-  if (!settings?.markAsReadOnOpen) {
-    storage.getUnreadCount().then(count => {
-      btn.classList.toggle('hidden', count === 0);
-    });
-  } else {
-    btn.classList.add('hidden');
-  }
+  // Show if there are any unread messages
+  storage.getUnreadCount().then(count => {
+    btn.classList.toggle('hidden', count === 0);
+  });
 }
 
 async function updateBadge() {

@@ -134,6 +134,19 @@ export function $$(selector, parent = document) {
   return parent.querySelectorAll(selector);
 }
 
+export function isPopupMode() {
+  return window.innerWidth < 800 && window.innerHeight < 600;
+}
+
+export function getPopupUrl() {
+  return chrome.runtime.getURL('src/popup/popup.html');
+}
+
+export function openInTab() {
+  chrome.tabs.create({ url: getPopupUrl() });
+  window.close();
+}
+
 export function createElement(tag, attributes = {}, children = []) {
   const el = document.createElement(tag);
   

@@ -1,6 +1,7 @@
 // Pushover Chrome Extension - Send Message Page
 import { getSettings, getDevices, getSendPreferences, saveSendPreferences } from '../lib/storage.js';
 import { $ } from '../lib/utils.js';
+import { initTabMode } from '../lib/tab-mode.js';
 import { logger } from '../lib/logger.js';
 
 const elements = {
@@ -34,6 +35,7 @@ const LIMITS = {
 let settings = null;
 
 async function init() {
+  initTabMode();
   elements.backBtn = $('#back-btn');
   elements.credentialsWarning = $('#credentials-warning');
   elements.form = $('#send-form');

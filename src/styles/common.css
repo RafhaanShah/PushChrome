@@ -144,3 +144,29 @@ body {
 .hidden {
   display: none !important;
 }
+
+/* =============================================================================
+   Tab Mode (pop-out window)
+   ============================================================================= */
+
+body.tab-mode {
+  max-width: none;
+  max-height: none;
+  min-height: 100vh;
+}
+
+body.tab-mode .container {
+  max-width: 600px;
+  max-height: none;
+  margin: 0 auto;
+  min-height: 100vh;
+}
+
+body.tab-mode .empty-state,
+body.tab-mode .error-state {
+  padding: 80px 24px;
+}
+
+body.tab-mode .empty-icon {
+  font-size: 64px;
+}

@@ -545,3 +545,25 @@ body {
 .message-list::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
+
+/* Tab Mode - messages-specific overrides */
+body.tab-mode {
+  overflow: auto;
+}
+
+body.tab-mode .container {
+  max-height: none;
+  height: auto;
+}
+
+body.tab-mode #content {
+  overflow: visible;
+}
+
+body.tab-mode #messages-container {
+  overflow: visible;
+}
+
+body.tab-mode .message-list {
+  overflow: visible;
+}

@@ -14,9 +14,11 @@ import {
   saveDevices,
   getErrorState,
   setErrorState,
-  clearErrorState
+  clearErrorState,
+  markAllRead
 } from '../lib/storage.js';
 import { fetchMessages, deleteMessages, sendMessage, createWebSocketConnection, validateCredentials, ERROR_TYPES } from '../lib/api.js';
+import { getPopupUrl } from '../lib/utils.js';
 import { logger } from '../lib/logger.js';
 
 const MESSAGE_REFRESH_ALARM_NAME = 'refreshMessages';
@@ -339,6 +341,16 @@ async function buildContextMenus() {
   const devices = await getDevices();
   
   // Browser action context menu items (right-click on extension icon)
+  chrome.contextMenus.create({
+    id: 'pop-out',
+    title: 'Open in New Tab',
+    contexts: ['action']
+  });
+  chrome.contextMenus.create({
+    id: 'mark-all-read',
+    title: 'Mark All as Read',
+    contexts: ['action']
+  });
   if (session?.secret && session?.deviceId) {
     chrome.contextMenus.create({
       id: 'refresh-messages',
@@ -431,6 +443,20 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     if (!result.success) {
       showToastNotification('Refresh Failed', result.error || 'Unknown error');
     }
+    return;
+  }
+  
+  if (menuId === 'mark-all-read') {
+    logger.debug('Mark all as read triggered from context menu');
+    await markAllRead();
+    await clearAllMessageNotifications();
+    await updateBadge();
+    return;
+  }
+  
+  if (menuId === 'pop-out') {
+    logger.debug('Pop-out triggered from context menu');
+    chrome.tabs.create({ url: getPopupUrl() });
     return;
   }
   

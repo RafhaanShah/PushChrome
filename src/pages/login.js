@@ -2,6 +2,7 @@
 import { login, registerDevice } from '../lib/api.js';
 import { saveSession, isLoggedIn, getPendingLogin, savePendingLogin, clearPendingLogin } from '../lib/storage.js';
 import { generateDeviceName, $ } from '../lib/utils.js';
+import { initTabMode } from '../lib/tab-mode.js';
 
 const elements = {
   form: null,
@@ -24,6 +25,7 @@ let pendingCredentials = null;
 let pendingLoginResult = null;
 
 function init() {
+  initTabMode();
   elements.form = $('#login-form');
   elements.credentialsSection = $('#credentials-section');
   elements.twofaSection = $('#twofa-section');
