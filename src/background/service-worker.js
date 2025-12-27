@@ -19,7 +19,7 @@ import {
 import { fetchMessages, deleteMessages, sendMessage, createWebSocketConnection, validateCredentials, ERROR_TYPES } from '../lib/api.js';
 import { logger } from '../lib/logger.js';
 
-const ALARM_NAME = 'refreshMessages';
+const MESSAGE_REFRESH_ALARM_NAME = 'refreshMessages';
 const DEVICE_REFRESH_ALARM_NAME = 'refreshDevices';
 const CLEANUP_ALARM_NAME = 'cleanupMessages';
 const WEBSOCKET_KEEPALIVE_ALARM = 'websocketKeepalive';
@@ -130,12 +130,12 @@ async function setupAlarms() {
   const session = await getSession();
   
   // Clear existing refresh alarm
-  await chrome.alarms.clear(ALARM_NAME);
+  await chrome.alarms.clear(MESSAGE_REFRESH_ALARM_NAME);
   
   // Only set up refresh alarm if logged in AND periodic refresh is enabled (interval > 0)
   // WebSocket mode (interval = -1) and manual mode (interval = 0) don't use alarms
   if (session?.secret && session?.deviceId && settings.refreshInterval > 0) {
-    chrome.alarms.create(ALARM_NAME, {
+    chrome.alarms.create(MESSAGE_REFRESH_ALARM_NAME, {
       periodInMinutes: settings.refreshInterval
     });
     logger.info(`Refresh alarm set for every ${settings.refreshInterval} minutes`);
@@ -169,7 +169,7 @@ async function setupAlarms() {
 }
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === ALARM_NAME) {
+  if (alarm.name === MESSAGE_REFRESH_ALARM_NAME) {
     logger.debug('Refresh alarm triggered');
     await refreshMessages();
   } else if (alarm.name === DEVICE_REFRESH_ALARM_NAME) {
@@ -334,12 +334,30 @@ async function setupWebSocketKeepalive(enabled) {
 async function buildContextMenus() {
   await chrome.contextMenus.removeAll();
   
+  const session = await getSession();
   const settings = await getSettings();
   const devices = await getDevices();
   
-  // Only show menus if send credentials are configured
+  // Browser action context menu items (right-click on extension icon)
+  if (session?.secret && session?.deviceId) {
+    chrome.contextMenus.create({
+      id: 'refresh-messages',
+      title: 'Refresh Messages',
+      contexts: ['action']
+    });
+  }
+  
+  if (settings.apiToken && settings.userKey) {
+    chrome.contextMenus.create({
+      id: 'refresh-devices',
+      title: 'Refresh Device List',
+      contexts: ['action']
+    });
+  }
+  
+  // Only show send menus if send credentials are configured
   if (!settings.apiToken || !settings.userKey) {
-    logger.debug('Context menus not created: missing send credentials');
+    logger.debug('Send context menus not created: missing send credentials');
     return;
   }
   
@@ -391,8 +409,32 @@ async function buildContextMenus() {
 }
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  const settings = await getSettings();
   const menuId = info.menuItemId;
+  
+  // Handle browser action context menu items
+  if (menuId === 'refresh-messages') {
+    logger.debug('Manual message refresh triggered from context menu');
+    await showRefreshingBadge();
+    const result = await refreshMessages();
+    await updateBadge();
+    if (result.error && result.error !== 'not_logged_in') {
+      showToastNotification('Refresh Failed', result.error);
+    }
+    return;
+  }
+  
+  if (menuId === 'refresh-devices') {
+    logger.debug('Manual device refresh triggered from context menu');
+    await showRefreshingBadge();
+    const result = await refreshDevices();
+    await updateBadge();
+    if (!result.success) {
+      showToastNotification('Refresh Failed', result.error || 'Unknown error');
+    }
+    return;
+  }
+  
+  const settings = await getSettings();
   
   // Parse menu ID: "send-page-deviceName" or "send-selection-all"
   const isPage = menuId.startsWith('send-page-');
@@ -553,6 +595,11 @@ function notifyPopupOfNewMessages() {
 // =============================================================================
 // Badge Management
 // =============================================================================
+
+async function showRefreshingBadge() {
+  await chrome.action.setBadgeText({ text: '↻' });
+  await chrome.action.setBadgeBackgroundColor({ color: '#2196F3' }); // Blue for refreshing
+}
 
 async function updateBadge() {
   const settings = await getSettings();
