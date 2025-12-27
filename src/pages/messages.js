@@ -11,6 +11,7 @@ let settings = null;
 async function init() {
   setupEventListeners();
   setupMessageListener();
+  await checkErrorState();
   await checkAuthAndLoadMessages();
 }
 
@@ -29,6 +30,10 @@ function setupEventListeners() {
   });
   $('#retry-btn')?.addEventListener('click', () => refreshMessages(false)); // Manual: no debounce
   $('#mark-read-btn').addEventListener('click', handleMarkAllRead);
+  
+  // Error banner actions
+  $('#error-banner-action')?.addEventListener('click', handleErrorAction);
+  $('#error-banner-dismiss')?.addEventListener('click', dismissErrorBanner);
 }
 
 function setupMessageListener() {
@@ -42,6 +47,10 @@ function setupMessageListener() {
           markMessagesAsRead();
         }
       });
+    }
+    
+    if (request.action === 'errorStateChanged') {
+      checkErrorState();
     }
   });
 }
@@ -344,6 +353,59 @@ function showStatus(message, isError = false) {
   setTimeout(() => {
     statusBar.classList.add('hidden');
   }, 3000);
+}
+
+// =============================================================================
+// Error State Handling
+// =============================================================================
+
+let currentErrorState = null;
+
+async function checkErrorState() {
+  const errorState = await storage.getErrorState();
+  currentErrorState = errorState;
+  
+  const banner = $('#error-banner');
+  const text = $('#error-banner-text');
+  const actionBtn = $('#error-banner-action');
+  
+  if (errorState?.type && !errorState.recoverable) {
+    // Show error banner
+    text.textContent = errorState.message;
+    
+    // Configure action button based on error type
+    if (errorState.type === 'receive_auth' || errorState.type === 'receive_device') {
+      actionBtn.textContent = 'Re-login';
+      actionBtn.classList.remove('hidden');
+    } else if (errorState.type === 'send_auth') {
+      actionBtn.textContent = 'Settings';
+      actionBtn.classList.remove('hidden');
+    } else {
+      actionBtn.classList.add('hidden');
+    }
+    
+    banner.classList.remove('hidden');
+  } else {
+    banner.classList.add('hidden');
+  }
+}
+
+async function handleErrorAction() {
+  if (!currentErrorState) return;
+  
+  if (currentErrorState.type === 'receive_auth' || currentErrorState.type === 'receive_device') {
+    // Clear session and redirect to login
+    await storage.clearSession();
+    await storage.clearErrorState();
+    window.location.href = 'login.html';
+  } else if (currentErrorState.type === 'send_auth') {
+    window.location.href = 'settings.html';
+  }
+}
+
+async function dismissErrorBanner() {
+  // Just hide the banner but keep the error state (user acknowledged it)
+  $('#error-banner').classList.add('hidden');
 }
 
 document.addEventListener('DOMContentLoaded', init);

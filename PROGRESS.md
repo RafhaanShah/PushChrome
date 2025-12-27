@@ -530,9 +530,70 @@ Right-click on selection → "Send 'text...' to Pushover" → [All devices, Devi
 
 ---
 
+### Step 10c: Robust Error Handling ✅
+**Completed:** 2024-12-27
+
+**Updated Files:**
+- `src/lib/storage.js` - Added error state storage functions
+- `src/lib/api.js` - Added structured error types and classification
+- `src/background/service-worker.js` - Comprehensive error handling throughout
+- `src/pages/messages.html` - Added error banner UI
+- `src/pages/messages.css` - Error banner styling
+- `src/pages/messages.js` - Error state display and handling
+
+**Error State Storage:**
+- `getErrorState()` - Returns current error state or null
+- `setErrorState({ type, message, recoverable })` - Sets error with timestamp
+- `clearErrorState(prefix?)` - Clears error state (optionally by prefix like 'receive' or 'send')
+
+**API Error Classification:**
+- `ERROR_TYPES` enum: `AUTH`, `DEVICE`, `VALIDATION`, `RATE_LIMIT`, `SERVER`, `NETWORK`, `UNKNOWN`
+- `classifyError(status, errors)` - Auto-classifies errors based on HTTP status and error messages
+- `PushoverAPIError.errorType` - Each error now carries its classified type
+- `PushoverAPIError.isRecoverable` - Getter to determine if error is transient
+
+**Error Types Tracked:**
+| Type | Trigger | User Action Required |
+|------|---------|---------------------|
+| `receive_auth` | Session expired, password changed | Re-login |
+| `receive_device` | Device deleted from account | Re-register device |
+| `send_auth` | Invalid API token or user key | Check settings |
+| `rate_limit` | 10k message limit exceeded | Wait (recoverable) |
+
+**Badge Warning State:**
+- Non-recoverable errors show orange "!" badge
+- Takes precedence over unread message count
+- Updates automatically when error state changes
+
+**OS Notifications for Critical Errors:**
+- Persistent notifications for auth/device errors
+- `requireInteraction: true` - stays until dismissed
+- Unique notification IDs prevent duplicates
+
+**Error Banner in Messages Page:**
+- Yellow warning banner at top of messages list
+- Shows error message with action button ("Re-login" or "Settings")
+- Dismiss button to acknowledge and hide banner
+- Responds to real-time error state changes from service worker
+
+**Service Worker Error Handling:**
+- `refreshMessages()`: Detects auth/device errors, sets error state, disconnects WebSocket
+- WebSocket `onError`: Handles permanent (`E`) and session conflict (`A`) errors
+- `handleSendMessage()`: Detects validation errors for send credentials
+- Context menu sending: Same error handling as direct sends
+
+**Graceful Degradation:**
+- Receive errors don't block sending (if send credentials are valid)
+- Send errors don't block receiving (if logged in properly)
+- Transient errors (network, server 5xx) logged but don't set persistent error state
+- Successful operations clear their respective error states
+
+---
+
 ## Deferred Tasks (for Step 11 - Polish)
 
 - [x] **Icon caching**: Implement Cache API caching for Pushover app icons per API guidelines
+- [x] **Robust error handling**: Credential validation, error states, warning badge, OS notifications
 - [ ] **Dark mode theme**: System preference detection, settings toggle, CSS custom properties
 - [ ] **Send-only mode**: Allow sending messages without login/device registration (no desktop license needed)
 - [ ] **Pop-out mode**: Open message list in standalone resizable window

@@ -827,12 +827,27 @@ Server Messages:
 - CSS custom properties for theme colors
 - Persist preference in `chrome.storage.sync`
 
-### Send-Only Mode (No Login)
-- Allow users to configure API token + user key without logging in
-- Skip device registration, disable message receiving
-- Only show "Send Message" functionality
-- Useful for users who just want to push notifications without the desktop license
-- Settings page accessible directly from popup when not logged in
+### Operating Modes (Future)
+The extension should support flexible operating modes based on which credentials are configured:
+
+| Mode | Receive Credentials | Send Credentials | Capabilities |
+|------|---------------------|------------------|--------------|
+| **Full** | ✓ Logged in | ✓ Configured | Receive + Send messages |
+| **Receive-Only** | ✓ Logged in | ✗ Not configured | Receive messages only |
+| **Send-Only** | ✗ Not logged in | ✓ Configured | Send messages only |
+| **Unconfigured** | ✗ | ✗ | Show setup instructions |
+
+**Send-Only Mode Benefits:**
+- No Pushover Desktop license required
+- Skip device registration entirely
+- Settings page accessible directly from popup
+- Useful for users who just want to push notifications
+
+**Receive-Only Mode Benefits:**
+- No need to create/register an application
+- Users who only want to monitor notifications
+
+All error handling and credential validation should respect these modes - errors for unconfigured features should not block configured features from working
 
 ### Device List Refresh ✅ DONE
 - ~~Periodically refresh the user's device list from `/1/users/validate.json`~~
@@ -851,17 +866,211 @@ Server Messages:
 - Clear stored email after successful login/device registration
 - Allows user to close popup to retrieve password without losing email input
 
-### Invalidated Credentials Handling
-- Detect when API returns authentication errors (invalid secret, revoked device, expired session)
-- Show user-friendly error explaining credentials are no longer valid
-- Prompt user to re-authenticate without losing cached messages
-- Consider preserving send credentials (API token/user key) separately from session
+### Robust Error Handling & Credential Validation
 
-### Re-Login Flow
+#### Error Categories
+
+The extension must handle errors from both the Open Client API (receiving) and Message API (sending):
+
+**Open Client API Errors (Receiving Messages):**
+
+| Error | Trigger | Detection | User Impact |
+|-------|---------|-----------|-------------|
+| Invalid/expired secret | Password changed, session revoked | HTTP 4xx, `status: 0` | Cannot receive messages |
+| Device deleted/invalid | User removed device from dashboard | HTTP 4xx on message fetch | Cannot receive messages |
+| No Desktop license | 30-day trial expired | Specific error message | Cannot receive messages |
+| WebSocket `E` frame | Permanent server error | WebSocket message | Must re-login |
+| WebSocket `A` frame | Device logged in elsewhere | WebSocket message | Session conflict |
+| HTTP 5xx | Temporary server issues | HTTP status code | Retry with backoff |
+
+**Message API Errors (Sending Messages):**
+
+| Error | Trigger | Detection | User Impact |
+|-------|---------|-----------|-------------|
+| Invalid token | App token revoked/incorrect | HTTP 4xx, `status: 0` | Cannot send messages |
+| Invalid user key | User key incorrect | HTTP 4xx, `status: 0` | Cannot send messages |
+| User deactivated | Recipient account disabled | HTTP 4xx, `status: 0` | Cannot send to user |
+| Rate limit exceeded | 10k messages/month limit | HTTP 429 | Temporary send block |
+| Device not found | Target device name invalid | HTTP 4xx, `status: 0` | Send to specific device fails |
+
+#### Error State System
+
+**Storage Structure:**
+```js
+// In chrome.storage.local
+{
+  "errorState": {
+    "type": "receive_auth" | "receive_device" | "send_auth" | "rate_limit" | null,
+    "message": "Human-readable error description",
+    "timestamp": 1703635200000,
+    "recoverable": false  // Can be fixed by retry vs needs user action
+  }
+}
+```
+
+**Error Types:**
+- `receive_auth`: Session secret invalid, requires re-login
+- `receive_device`: Device deleted/invalid, requires re-registration
+- `send_auth`: API token or user key invalid
+- `rate_limit`: Temporary rate limiting (recoverable)
+- `null`: No active error
+
+#### Visual Error Indicators
+
+**Badge States:**
+1. **Normal (unread count):** Red badge with number
+2. **Warning (error state):** Yellow/orange badge with "!" 
+3. **Priority:** Error badge takes precedence over unread count
+
+**Badge Implementation:**
+```js
+async function updateBadge() {
+  const errorState = await getErrorState();
+  
+  if (errorState?.type && !errorState.recoverable) {
+    // Show warning badge for non-recoverable errors
+    await chrome.action.setBadgeText({ text: '!' });
+    await chrome.action.setBadgeBackgroundColor({ color: '#FF9800' }); // Orange
+    return;
+  }
+  
+  // Normal unread count badge
+  const count = await getUnreadCount();
+  // ... existing logic
+}
+```
+
+**Popup Error Banner:**
+- Prominent banner at top of popup when `errorState` is set
+- Clear explanation of the issue
+- Action button (e.g., "Re-login", "Check Settings")
+- Dismiss option for acknowledged errors
+
+#### OS Notifications for Critical Errors
+
+Show persistent notifications for:
+- Session invalidated (secret expired, password changed)
+- Device deleted/unregistered  
+- WebSocket permanent errors (`E`, `A` frames)
+- Send credential validation failures (on first use)
+
+```js
+function showErrorNotification(type, message) {
+  chrome.notifications.create(`pushover-error-${type}`, {
+    type: 'basic',
+    iconUrl: chrome.runtime.getURL('src/icons/icon-128.png'),
+    title: 'Pushover: Action Required',
+    message: message,
+    priority: 2,
+    requireInteraction: true  // Stay visible until dismissed
+  });
+}
+```
+
+#### API Error Detection
+
+**Structured Error Types in api.js:**
+```js
+class PushoverAPIError extends Error {
+  constructor(message, status, errors = [], errorType = 'unknown') {
+    super(message);
+    this.name = 'PushoverAPIError';
+    this.status = status;
+    this.errors = errors;
+    this.errorType = errorType; // 'auth', 'device', 'rate_limit', 'validation', 'server'
+  }
+}
+
+// Error type detection based on HTTP status and error messages
+function classifyError(status, errors) {
+  if (status === 401 || status === 403) return 'auth';
+  if (status === 429) return 'rate_limit';
+  if (status >= 500) return 'server';
+  
+  const errorStr = (errors || []).join(' ').toLowerCase();
+  if (errorStr.includes('secret') || errorStr.includes('login')) return 'auth';
+  if (errorStr.includes('device')) return 'device';
+  if (errorStr.includes('token') || errorStr.includes('user')) return 'validation';
+  
+  return 'unknown';
+}
+```
+
+#### Service Worker Error Handling
+
+**On Receive Errors:**
+```js
+async function refreshMessages(options = {}) {
+  try {
+    const messages = await fetchMessages(session.secret, session.deviceId);
+    // ... success handling
+    await clearErrorState('receive');  // Clear any previous receive errors
+  } catch (error) {
+    if (error.errorType === 'auth' || error.errorType === 'device') {
+      await setErrorState({
+        type: `receive_${error.errorType}`,
+        message: error.message,
+        recoverable: false
+      });
+      await disconnectWebSocket();
+      showErrorNotification('receive', 'Unable to receive messages. Please re-login.');
+    } else if (error.errorType === 'server') {
+      // Transient error - don't set error state, just log
+      logger.warn('Temporary server error, will retry:', error.message);
+    }
+    await updateBadge();
+  }
+}
+```
+
+**On WebSocket Errors:**
+```js
+onError: async (type, message) => {
+  if (type === 'permanent' || type === 'session_conflict') {
+    await setErrorState({
+      type: type === 'session_conflict' ? 'receive_device' : 'receive_auth',
+      message: message,
+      recoverable: false
+    });
+    showErrorNotification('websocket', message);
+    await disconnectWebSocket();
+    await updateBadge();
+  }
+}
+```
+
+#### Graceful Degradation
+
+The extension should continue functioning for configured features even when others fail:
+
+- **Receive credentials invalid + Send credentials valid:** 
+  - Show warning, disable receive features, allow sending
+  - Context menus still work
+  
+- **Send credentials invalid + Receive credentials valid:**
+  - Show warning, disable send features, continue receiving
+  - Hide context menus, disable send page
+  
+- **Both invalid:**
+  - Show setup instructions
+  - Preserve cached messages
+
+#### Re-Login Flow
+
 - Allow logged-in users to re-authenticate without full logout
 - Useful when session expires but user wants to keep same device name
 - Option to "refresh session" vs "logout and start fresh"
 - Handle device name conflicts gracefully (device already exists for this account)
+- Preserve cached messages during re-login
+
+#### Implementation Priority
+
+1. **Error state storage + warning badge** (core infrastructure)
+2. **Structured error types in API** (detection)
+3. **Service worker error handling + notifications** (user alerting)
+4. **Popup error banner** (visibility)
+5. **Credential validation on settings save** (prevention)
+6. **Graceful degradation for mixed credential states** (flexibility)
 
 ### Auto-Save Settings
 - Remove manual "Save Settings" button

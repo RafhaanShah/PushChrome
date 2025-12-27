@@ -5,12 +5,66 @@ import { logger } from './logger.js';
 
 const API_BASE = 'https://api.pushover.net/1';
 
+// Error types for classification
+export const ERROR_TYPES = {
+  AUTH: 'auth',           // Invalid secret/credentials
+  DEVICE: 'device',       // Device deleted/invalid
+  VALIDATION: 'validation', // Invalid token/user key for sending
+  RATE_LIMIT: 'rate_limit', // Rate limited (429)
+  SERVER: 'server',       // Temporary server error (5xx)
+  NETWORK: 'network',     // Network/connection error
+  UNKNOWN: 'unknown'      // Unknown error
+};
+
+function classifyError(status, errors) {
+  // Classify by HTTP status first
+  switch (status) {
+    case 429:
+      return ERROR_TYPES.RATE_LIMIT;
+    case 401:
+    case 403:
+      return ERROR_TYPES.AUTH;
+  }
+  
+  if (status >= 500) {
+    return ERROR_TYPES.SERVER;
+  }
+  
+  // Fall back to error message content analysis
+  const errorStr = (errors || []).join(' ').toLowerCase();
+  
+  switch (true) {
+    case errorStr.includes('secret'):
+    case errorStr.includes('not logged in'):
+    case errorStr.includes('session'):
+      return ERROR_TYPES.AUTH;
+      
+    case errorStr.includes('device') && 
+         (errorStr.includes('not found') || errorStr.includes('invalid') || errorStr.includes('not registered')):
+      return ERROR_TYPES.DEVICE;
+      
+    case errorStr.includes('token'):
+    case errorStr.includes('user identifier'):
+      return ERROR_TYPES.VALIDATION;
+      
+    default:
+      return ERROR_TYPES.UNKNOWN;
+  }
+}
+
 class PushoverAPIError extends Error {
-  constructor(message, status, errors = []) {
+  constructor(message, status, errors = [], errorType = null) {
     super(message);
     this.name = 'PushoverAPIError';
     this.status = status;
     this.errors = errors;
+    this.errorType = errorType || classifyError(status, errors);
+  }
+  
+  get isRecoverable() {
+    return this.errorType === ERROR_TYPES.SERVER || 
+           this.errorType === ERROR_TYPES.NETWORK || 
+           this.errorType === ERROR_TYPES.RATE_LIMIT;
   }
 }
 
@@ -28,22 +82,55 @@ function formatErrors(errors) {
 async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
   const { signal, ...rest } = options;
-  const response = await fetch(url, {
-    ...rest,
-    signal,
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      ...rest.headers
+  
+  let response;
+  try {
+    response = await fetch(url, {
+      ...rest,
+      signal,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        ...rest.headers
+      }
+    });
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw error;
     }
-  });
+    throw new PushoverAPIError(
+      'Network error: Unable to connect to Pushover servers',
+      0,
+      [],
+      ERROR_TYPES.NETWORK
+    );
+  }
 
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    if (response.status >= 500) {
+      throw new PushoverAPIError(
+        'Server error: Invalid response from Pushover',
+        response.status,
+        [],
+        ERROR_TYPES.SERVER
+      );
+    }
+    throw new PushoverAPIError(
+      'Invalid response from server',
+      response.status,
+      []
+    );
+  }
 
   if (!response.ok && response.status !== 412) {
+    const errors = Array.isArray(data.errors) ? data.errors : 
+                   (typeof data.errors === 'object' ? Object.values(data.errors).flat() : []);
     throw new PushoverAPIError(
       formatErrors(data.errors) || 'API request failed',
       response.status,
-      data.errors || []
+      errors
     );
   }
 

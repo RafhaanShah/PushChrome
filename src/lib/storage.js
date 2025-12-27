@@ -7,7 +7,8 @@ const STORAGE_KEYS = {
   SETTINGS: 'settings',
   PENDING_LOGIN: 'pendingLogin',
   DEVICES: 'devices',
-  SEND_PREFERENCES: 'sendPreferences'
+  SEND_PREFERENCES: 'sendPreferences',
+  ERROR_STATE: 'errorState'
 };
 
 const DEFAULT_SETTINGS = {
@@ -212,6 +213,42 @@ export async function savePendingLogin(loginResult) {
 
 export async function clearPendingLogin() {
   await chrome.storage.session.remove(STORAGE_KEYS.PENDING_LOGIN);
+}
+
+// =============================================================================
+// Error State (chrome.storage.local - tracks credential/connection errors)
+// =============================================================================
+
+export async function getErrorState() {
+  const result = await chrome.storage.local.get(STORAGE_KEYS.ERROR_STATE);
+  return result[STORAGE_KEYS.ERROR_STATE] || null;
+}
+
+export async function setErrorState(errorState) {
+  if (!errorState) {
+    await clearErrorState();
+    return;
+  }
+  
+  await chrome.storage.local.set({
+    [STORAGE_KEYS.ERROR_STATE]: {
+      type: errorState.type,
+      message: errorState.message,
+      timestamp: Date.now(),
+      recoverable: errorState.recoverable ?? false
+    }
+  });
+}
+
+export async function clearErrorState(prefix = null) {
+  if (prefix) {
+    const current = await getErrorState();
+    if (current?.type?.startsWith(prefix)) {
+      await chrome.storage.local.remove(STORAGE_KEYS.ERROR_STATE);
+    }
+  } else {
+    await chrome.storage.local.remove(STORAGE_KEYS.ERROR_STATE);
+  }
 }
 
 // =============================================================================

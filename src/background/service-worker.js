@@ -10,9 +10,13 @@ import {
   getVisibleMessages,
   getMessages,
   saveMessages,
-  getDevices
+  getDevices,
+  saveDevices,
+  getErrorState,
+  setErrorState,
+  clearErrorState
 } from '../lib/storage.js';
-import { fetchMessages, deleteMessages, sendMessage, createWebSocketConnection } from '../lib/api.js';
+import { fetchMessages, deleteMessages, sendMessage, createWebSocketConnection, validateCredentials, ERROR_TYPES } from '../lib/api.js';
 import { logger } from '../lib/logger.js';
 
 const ALARM_NAME = 'refreshMessages';
@@ -109,10 +113,11 @@ chrome.runtime.onStartup.addListener(async () => {
   await setupAlarms();
   await purgeDeletedMessages();
   await updateBadge();
-  await connectWebSocket();
-  
-  // Refresh messages on browser startup
+
   await refreshMessages();
+  await refreshDevices();
+
+  await connectWebSocket();
 });
 
 // =============================================================================
@@ -209,9 +214,32 @@ async function connectWebSocket() {
     
     onError: async (type, message) => {
       logger.error(`WebSocket error (${type}):`, message);
-      if (type === 'permanent' || type === 'session_conflict') {
-        // Don't auto-reconnect for permanent errors
+      const existingError = await getErrorState();
+      
+      if (type === 'permanent') {
+        const isNewError = existingError?.type !== 'receive_auth';
+        await setErrorState({
+          type: 'receive_auth',
+          message: 'Permanent error occurred. Please re-login.',
+          recoverable: false
+        });
         await disconnectWebSocket();
+        await updateBadge();
+        if (isNewError) {
+          showCriticalErrorNotification('websocket', 'Connection error. Please re-login to continue receiving messages.');
+        }
+      } else if (type === 'session_conflict') {
+        const isNewError = existingError?.type !== 'receive_device';
+        await setErrorState({
+          type: 'receive_device',
+          message: 'Device logged in from another session.',
+          recoverable: false
+        });
+        await disconnectWebSocket();
+        await updateBadge();
+        if (isNewError) {
+          showCriticalErrorNotification('session_conflict', 'Your device is now logged in from another session. Only one session per device is allowed.');
+        }
       }
     },
     
@@ -373,9 +401,29 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   
   try {
     await sendMessage(params);
+    
+    // Clear any previous send errors on success
+    await clearErrorState('send');
+    
     showToastNotification('Message Sent', `Sent to ${device === 'all' ? 'all devices' : device}`);
   } catch (error) {
-    showToastNotification('Send Failed', error.message || 'Failed to send message');
+    logger.error('Context menu send failed:', error);
+    
+    // Handle auth/validation errors for send credentials
+    // Always show notification for send errors since they result from user action
+    if (error.errorType === ERROR_TYPES.VALIDATION || error.errorType === ERROR_TYPES.AUTH) {
+      await setErrorState({
+        type: 'send_auth',
+        message: 'Send credentials invalid. Check your API token and user key in Settings.',
+        recoverable: false
+      });
+      await updateBadge();
+      showCriticalErrorNotification('send_auth', 'Unable to send messages. Your API credentials are invalid. Please check Settings.');
+    } else if (error.errorType === ERROR_TYPES.RATE_LIMIT) {
+      showToastNotification('Rate Limited', 'Message limit reached. Try again later.');
+    } else {
+      showToastNotification('Send Failed', error.message || 'Failed to send message');
+    }
   }
 });
 
@@ -406,6 +454,9 @@ async function refreshMessages(options = {}) {
     const messages = await fetchMessages(session.secret, session.deviceId);
     lastRefreshTime = Date.now();
     
+    // Clear any previous receive errors on successful fetch
+    await clearErrorState('receive');
+    
     let newCount = 0;
     if (messages.length > 0) {
       newCount = await appendMessages(messages);
@@ -435,7 +486,41 @@ async function refreshMessages(options = {}) {
     return { success: true, newCount };
   } catch (error) {
     logger.error('Failed to refresh messages:', error);
-    return { error: error.message };
+    
+    // Handle different error types - only show OS notification if this is a new error
+    const existingError = await getErrorState();
+    
+    if (error.errorType === ERROR_TYPES.AUTH) {
+      const isNewError = existingError?.type !== 'receive_auth';
+      await setErrorState({
+        type: 'receive_auth',
+        message: 'Session expired or invalid. Please re-login.',
+        recoverable: false
+      });
+      await disconnectWebSocket();
+      if (isNewError) {
+        showCriticalErrorNotification('receive_auth', 'Unable to receive messages. Your session has expired. Please re-login.');
+      }
+    } else if (error.errorType === ERROR_TYPES.DEVICE) {
+      const isNewError = existingError?.type !== 'receive_device';
+      await setErrorState({
+        type: 'receive_device',
+        message: 'Device not found. It may have been deleted.',
+        recoverable: false
+      });
+      await disconnectWebSocket();
+      if (isNewError) {
+        showCriticalErrorNotification('receive_device', 'Your device was not found. It may have been deleted from your Pushover account.');
+      }
+    } else if (error.errorType === ERROR_TYPES.SERVER || error.errorType === ERROR_TYPES.NETWORK) {
+      // Transient errors - don't set persistent error state, just log
+      logger.warn('Temporary error, will retry on next refresh:', error.message);
+    }
+    
+    // Always update badge to reflect any error state
+    await updateBadge();
+    
+    return { error: error.message, errorType: error.errorType };
   }
 }
 
@@ -460,13 +545,22 @@ async function updateBadge() {
     return;
   }
   
+  // Check for non-recoverable errors that require user action (auth/device issues)
+  // Transient errors (network, server) don't show warning badge - we'll retry automatically
+  const errorState = await getErrorState();
+  if (errorState?.type && !errorState.recoverable) {
+    await chrome.action.setBadgeText({ text: '!' });
+    await chrome.action.setBadgeBackgroundColor({ color: '#FF9800' }); // Orange for warning
+    return;
+  }
+  
   const count = await getUnreadCount();
   
   if (count > 0) {
     await chrome.action.setBadgeText({ 
       text: count > 99 ? '99+' : String(count) 
     });
-    await chrome.action.setBadgeBackgroundColor({ color: '#E53935' });
+    await chrome.action.setBadgeBackgroundColor({ color: '#E53935' }); // Red for unread
   } else {
     await chrome.action.setBadgeText({ text: '' });
   }
@@ -607,6 +701,13 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
     await updateBadge();
   }
   
+  // Update badge when error state changes
+  if (area === 'local' && changes.errorState) {
+    await updateBadge();
+    // Notify popup/pages of error state change
+    chrome.runtime.sendMessage({ action: 'errorStateChanged' }).catch(() => {});
+  }
+  
   // Reconfigure alarms and WebSocket when settings change
   if (area === 'sync' && changes.settings) {
     await setupAlarms();
@@ -620,12 +721,15 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area === 'local' && changes.session) {
     await setupAlarms();
     if (changes.session.newValue?.deviceId) {
-      // User just logged in, connect WebSocket
+      // User just logged in, clear any previous errors and connect WebSocket
+      await clearErrorState();
       await connectWebSocket();
     } else if (!changes.session.newValue) {
-      // User logged out, disconnect WebSocket
+      // User logged out, disconnect WebSocket and clear errors
       await disconnectWebSocket();
+      await clearErrorState();
     }
+    await updateBadge();
   }
   
   // Rebuild context menus when devices change
@@ -679,7 +783,40 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
   }
+  
+  if (request.action === 'refreshDevices') {
+    refreshDevices().then((result) => {
+      sendResponse(result);
+    });
+    return true;
+  }
 });
+
+// =============================================================================
+// Refresh Devices
+// =============================================================================
+
+async function refreshDevices() {
+  try {
+    const settings = await getSettings();
+    
+    if (!settings.apiToken || !settings.userKey) {
+      return { success: false, error: 'Send credentials not configured' };
+    }
+    
+    const result = await validateCredentials(settings.apiToken, settings.userKey);
+    
+    if (!result.valid) {
+      return { success: false, error: 'Invalid credentials' };
+    }
+    
+    await saveDevices(result.devices);
+    return { success: true, devices: result.devices };
+  } catch (error) {
+    logger.error('Failed to refresh devices:', error);
+    return { success: false, error: error.message };
+  }
+}
 
 // =============================================================================
 // Send Message
@@ -688,6 +825,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function handleSendMessage(params) {
   try {
     const result = await sendMessage(params);
+    
+    // Clear any previous send errors on success
+    await clearErrorState('send');
     
     // Check if send page is still open
     const sendPageOpen = await isSendPageOpen();
@@ -699,6 +839,22 @@ async function handleSendMessage(params) {
     
     return { success: true, ...result };
   } catch (error) {
+    logger.error('Send message failed:', error);
+    
+    // Handle auth/validation errors for send credentials
+    if (error.errorType === ERROR_TYPES.VALIDATION || error.errorType === ERROR_TYPES.AUTH) {
+      await setErrorState({
+        type: 'send_auth',
+        message: 'Send credentials invalid. Check your API token and user key in Settings.',
+        recoverable: false
+      });
+      await updateBadge();
+    } else if (error.errorType === ERROR_TYPES.RATE_LIMIT) {
+      // Rate limit is temporary - show notification but don't set persistent error
+      showToastNotification('Rate Limited', 'Message limit reached. Try again later.');
+      return { success: false, error: error.message, errorType: error.errorType };
+    }
+    
     // Check if send page is still open
     const sendPageOpen = await isSendPageOpen();
     
@@ -707,7 +863,7 @@ async function handleSendMessage(params) {
       showToastNotification('Send Failed', error.message || 'Failed to send message');
     }
     
-    return { success: false, error: error.message };
+    return { success: false, error: error.message, errorType: error.errorType };
   }
 }
 
@@ -737,6 +893,22 @@ function showToastNotification(title, message) {
   setTimeout(() => {
     chrome.notifications.clear(notificationId);
   }, 5000);
+}
+
+function showCriticalErrorNotification(type, message) {
+  const notificationId = `pushover-error-${type}`;
+  
+  // Clear any existing error notification of this type first
+  chrome.notifications.clear(notificationId);
+  
+  chrome.notifications.create(notificationId, {
+    type: 'basic',
+    iconUrl: chrome.runtime.getURL('src/icons/icon-128.png'),
+    title: 'Pushover: Action Required',
+    message: message,
+    priority: 2,
+    requireInteraction: true // Stay visible until dismissed
+  });
 }
 
 // =============================================================================
