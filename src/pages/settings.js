@@ -8,15 +8,19 @@ import { logger } from '../lib/logger.js';
 let isLoggedIn = false;
 
 const elements = {
-  backBtn: null,
+  messagesBtn: null,
+  sendBtn: null,
   deviceName: null,
   userId: null,
   logoutBtn: null,
+  loginPrompt: null,
+  loginBtn: null,
   apiToken: null,
   userKey: null,
   userKeyGroup: null,
   validateBtn: null,
   validateResult: null,
+  receiveSettings: null,
   refreshInterval: null,
   deviceRefreshInterval: null,
   maxMessages: null,
@@ -29,15 +33,19 @@ const elements = {
 
 async function init() {
   initTabMode();
-  elements.backBtn = $('#back-btn');
+  elements.messagesBtn = $('#messages-btn');
+  elements.sendBtn = $('#send-btn');
   elements.deviceName = $('#device-name');
   elements.userId = $('#user-id');
   elements.logoutBtn = $('#logout-btn');
+  elements.loginPrompt = $('#login-prompt');
+  elements.loginBtn = $('#login-btn');
   elements.apiToken = $('#api-token');
   elements.userKey = $('#user-key');
   elements.userKeyGroup = $('#user-key-group');
   elements.validateBtn = $('#validate-btn');
   elements.validateResult = $('#validate-result');
+  elements.receiveSettings = $('#receive-settings');
   elements.refreshInterval = $('#refresh-interval');
   elements.deviceRefreshInterval = $('#device-refresh-interval');
   elements.maxMessages = $('#max-messages');
@@ -60,12 +68,15 @@ async function loadAccountInfo() {
     elements.deviceName.textContent = session.deviceName || '-';
     elements.userId.textContent = session.userId || '-';
     elements.userKey.value = session.userId;
+    elements.messagesBtn.classList.remove('hidden');
+    elements.logoutBtn.classList.remove('hidden');
   } else {
-    // Not logged in - show user key field for send-only mode
     isLoggedIn = false;
     elements.userKeyGroup.classList.remove('hidden');
-    elements.deviceName.textContent = 'Not logged in';
+    elements.deviceName.textContent = '-';
     elements.userId.textContent = '-';
+    elements.receiveSettings.classList.add('hidden');
+    elements.loginPrompt.classList.remove('hidden');
   }
 }
 
@@ -84,14 +95,18 @@ async function loadSettings() {
 }
 
 function bindEvents() {
-  elements.backBtn.addEventListener('click', handleBack);
+  elements.messagesBtn.addEventListener('click', () => {
+    window.location.href = 'messages.html';
+  });
+  elements.sendBtn.addEventListener('click', () => {
+    window.location.href = 'send.html';
+  });
   elements.logoutBtn.addEventListener('click', handleLogout);
+  elements.loginBtn.addEventListener('click', () => {
+    window.location.href = 'login.html';
+  });
   elements.validateBtn.addEventListener('click', handleValidate);
   elements.saveBtn.addEventListener('click', handleSave);
-}
-
-function handleBack() {
-  window.location.href = '../popup/popup.html';
 }
 
 async function handleLogout() {

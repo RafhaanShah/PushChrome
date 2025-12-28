@@ -45,6 +45,11 @@ export async function isLoggedIn() {
   return !!(session?.secret && session?.deviceId);
 }
 
+export async function isSendOnlyMode() {
+  const settings = await getSettings();
+  return !!(settings?.apiToken && settings?.userKey);
+}
+
 // =============================================================================
 // Settings Storage (chrome.storage.sync - synced across devices)
 // =============================================================================

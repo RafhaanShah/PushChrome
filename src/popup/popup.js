@@ -8,9 +8,23 @@ async function init() {
   
   if (loggedIn) {
     window.location.replace('../pages/messages.html');
-  } else {
-    window.location.replace('../pages/login.html');
+    return;
   }
+  
+  // Check for pending login (user closed popup during login flow)
+  const pendingLogin = await storage.getPendingLogin();
+  if (pendingLogin) {
+    window.location.replace('../pages/login.html');
+    return;
+  }
+  
+  const sendOnlyMode = await storage.isSendOnlyMode();
+  if (sendOnlyMode) {
+    window.location.replace('../pages/send.html');
+    return;
+  }
+  
+  window.location.replace('../pages/login.html');
 }
 
 init();
