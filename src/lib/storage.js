@@ -221,6 +221,19 @@ export async function clearPendingLogin() {
   await chrome.storage.session.remove(STORAGE_KEYS.PENDING_LOGIN);
 }
 
+export async function getPendingEmail() {
+  const result = await chrome.storage.session.get('pendingEmail');
+  return result.pendingEmail || '';
+}
+
+export async function savePendingEmail(email) {
+  await chrome.storage.session.set({ pendingEmail: email });
+}
+
+export async function clearPendingEmail() {
+  await chrome.storage.session.remove('pendingEmail');
+}
+
 // =============================================================================
 // Error State (chrome.storage.local - tracks credential/connection errors)
 // =============================================================================

@@ -1,43 +1,36 @@
 // Pushover Chrome Extension - Login Page
 import { login, registerDevice } from '../lib/api.js';
-import { saveSession, isLoggedIn, getPendingLogin, savePendingLogin, clearPendingLogin } from '../lib/storage.js';
+import { saveSession, isLoggedIn, getPendingLogin, savePendingLogin, clearPendingLogin, getPendingEmail, savePendingEmail, clearPendingEmail } from '../lib/storage.js';
 import { generateDeviceName, $ } from '../lib/utils.js';
 import { initTabMode } from '../lib/tab-mode.js';
 
 const elements = {
   form: null,
   credentialsSection: null,
-  twofaSection: null,
   deviceSection: null,
   emailInput: null,
   passwordInput: null,
   twofaInput: null,
   deviceNameInput: null,
   loginBtn: null,
-  verifyBtn: null,
   registerBtn: null,
-  backBtn: null,
   deviceBackBtn: null,
   errorMessage: null
 };
 
-let pendingCredentials = null;
 let pendingLoginResult = null;
 
 function init() {
   initTabMode();
   elements.form = $('#login-form');
   elements.credentialsSection = $('#credentials-section');
-  elements.twofaSection = $('#twofa-section');
   elements.deviceSection = $('#device-section');
   elements.emailInput = $('#email');
   elements.passwordInput = $('#password');
   elements.twofaInput = $('#twofa-code');
   elements.deviceNameInput = $('#device-name');
   elements.loginBtn = $('#login-btn');
-  elements.verifyBtn = $('#verify-btn');
   elements.registerBtn = $('#register-btn');
-  elements.backBtn = $('#back-btn');
   elements.deviceBackBtn = $('#device-back-btn');
   elements.errorMessage = $('#error-message');
 
@@ -51,6 +44,12 @@ async function checkExistingSession() {
     return;
   }
   
+  // Restore pending email if user closed popup mid-login
+  const pendingEmail = await getPendingEmail();
+  if (pendingEmail) {
+    elements.emailInput.value = pendingEmail;
+  }
+  
   // Check for pending login (user closed popup after auth but before device registration)
   const pendingLogin = await getPendingLogin();
   if (pendingLogin) {
@@ -61,8 +60,10 @@ async function checkExistingSession() {
 
 function bindEvents() {
   elements.form.addEventListener('submit', handleSubmit);
-  elements.backBtn.addEventListener('click', handleBack);
-  elements.deviceBackBtn.addEventListener('click', handleBack);
+  elements.deviceBackBtn.addEventListener('click', handleDeviceBack);
+  elements.emailInput.addEventListener('input', () => {
+    savePendingEmail(elements.emailInput.value.trim());
+  });
 }
 
 async function handleSubmit(e) {
@@ -70,12 +71,9 @@ async function handleSubmit(e) {
   hideError();
 
   const isInDeviceMode = !elements.deviceSection.classList.contains('hidden');
-  const isInTwofaMode = !elements.twofaSection.classList.contains('hidden');
 
   if (isInDeviceMode) {
     await handleDeviceSubmit();
-  } else if (isInTwofaMode) {
-    await handleTwofaSubmit();
   } else {
     await handleLoginSubmit();
   }
@@ -84,6 +82,7 @@ async function handleSubmit(e) {
 async function handleLoginSubmit() {
   const email = elements.emailInput.value.trim();
   const password = elements.passwordInput.value;
+  const twofaCode = elements.twofaInput.value.trim() || null;
 
   if (!email || !password) {
     showError('Please enter your email and password.');
@@ -93,11 +92,11 @@ async function handleLoginSubmit() {
   setLoading(elements.loginBtn, true);
 
   try {
-    const result = await login(email, password);
+    const result = await login(email, password, twofaCode);
 
     if (result.requires2FA) {
-      pendingCredentials = { email, password };
-      showTwofaSection();
+      showError('Two-factor authentication is enabled. Please enter your 2FA code.');
+      elements.twofaInput.focus();
     } else {
       await savePendingLogin(result);
       showDeviceSection(result);
@@ -106,44 +105,6 @@ async function handleLoginSubmit() {
     showError(error.message || 'Login failed. Please check your credentials.');
   } finally {
     setLoading(elements.loginBtn, false);
-  }
-}
-
-async function handleTwofaSubmit() {
-  const twofaCode = elements.twofaInput.value.trim();
-
-  if (!twofaCode) {
-    showError('Please enter your authentication code.');
-    return;
-  }
-
-  if (!pendingCredentials) {
-    showError('Session expired. Please try again.');
-    handleBack();
-    return;
-  }
-
-  setLoading(elements.verifyBtn, true);
-
-  try {
-    const result = await login(
-      pendingCredentials.email,
-      pendingCredentials.password,
-      twofaCode
-    );
-
-    if (result.requires2FA) {
-      showError('Invalid authentication code. Please try again.');
-      elements.twofaInput.value = '';
-      elements.twofaInput.focus();
-    } else {
-      await savePendingLogin(result);
-      showDeviceSection(result);
-    }
-  } catch (error) {
-    showError(error.message || 'Verification failed. Please try again.');
-  } finally {
-    setLoading(elements.verifyBtn, false);
   }
 }
 
@@ -183,7 +144,7 @@ async function handleDeviceSubmit() {
     });
 
     await clearPendingLogin();
-    pendingCredentials = null;
+    await clearPendingEmail();
     pendingLoginResult = null;
     redirectToSettings();
   } catch (error) {
@@ -206,30 +167,20 @@ async function handleDeviceSubmit() {
 function showDeviceSection(loginResult) {
   pendingLoginResult = loginResult;
   elements.credentialsSection.classList.add('hidden');
-  elements.twofaSection.classList.add('hidden');
   elements.deviceSection.classList.remove('hidden');
   elements.deviceNameInput.value = generateDeviceName();
   elements.deviceNameInput.focus();
   elements.deviceNameInput.select();
 }
 
-function showTwofaSection() {
-  elements.credentialsSection.classList.add('hidden');
-  elements.twofaSection.classList.remove('hidden');
-  elements.twofaInput.value = '';
-  elements.twofaInput.focus();
-}
-
-async function handleBack() {
+async function handleDeviceBack() {
   await clearPendingLogin();
-  pendingCredentials = null;
   pendingLoginResult = null;
-  elements.twofaSection.classList.add('hidden');
   elements.deviceSection.classList.add('hidden');
   elements.credentialsSection.classList.remove('hidden');
-  elements.twofaInput.value = '';
   elements.deviceNameInput.value = '';
   elements.passwordInput.value = '';
+  elements.twofaInput.value = '';
   elements.emailInput.focus();
   hideError();
 }

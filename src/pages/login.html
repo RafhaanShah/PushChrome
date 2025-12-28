@@ -41,23 +41,8 @@
           >
         </div>
 
-        <button type="submit" id="login-btn" class="btn btn-primary btn-block">
-          <span class="btn-text">Sign In</span>
-          <span class="btn-loading hidden">
-            <span class="spinner"></span>
-          </span>
-        </button>
-      </div>
-
-      <!-- 2FA Section (hidden by default) -->
-      <div id="twofa-section" class="hidden">
-        <div class="twofa-notice">
-          <p>Two-factor authentication is enabled on your account.</p>
-          <p>Enter the code from your authenticator app.</p>
-        </div>
-
         <div class="form-group">
-          <label for="twofa-code">Authentication Code</label>
+          <label for="twofa-code">2FA Code <span class="label-hint">(if enabled)</span></label>
           <input 
             type="text" 
             id="twofa-code" 
@@ -70,15 +55,11 @@
           >
         </div>
 
-        <button type="submit" id="verify-btn" class="btn btn-primary btn-block">
-          <span class="btn-text">Verify</span>
+        <button type="submit" id="login-btn" class="btn btn-primary btn-block">
+          <span class="btn-text">Sign In</span>
           <span class="btn-loading hidden">
             <span class="spinner"></span>
           </span>
-        </button>
-
-        <button type="button" id="back-btn" class="btn btn-secondary btn-block">
-          Back
         </button>
       </div>
 

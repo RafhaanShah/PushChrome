@@ -123,7 +123,7 @@ async function handleValidate() {
   const user = elements.userKey.value.trim();
 
   if (!token || !user) {
-    showValidateResult('Please enter both API token and user key.', false);
+    showValidateResult('Please enter valid API token and User Key.', false);
     return;
   }
 

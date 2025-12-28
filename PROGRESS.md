@@ -595,5 +595,5 @@ Right-click on selection → "Send 'text...' to Pushover" → [All devices, Devi
 - [x] **Icon caching**: Implement Cache API caching for Pushover app icons per API guidelines
 - [x] **Robust error handling**: Credential validation, error states, warning badge, OS notifications
 - [ ] **Dark mode theme**: System preference detection, settings toggle, CSS custom properties
-- [ ] **Send-only mode**: Allow sending messages without login/device registration (no desktop license needed)
-- [ ] **Pop-out mode**: Open message list in standalone resizable window
+- [X] **Send-only mode**: Allow sending messages without login/device registration (no desktop license needed)
+- [X] **Pop-out mode**: Open message list in standalone resizable window

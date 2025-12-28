@@ -129,12 +129,31 @@ body {
 }
 
 .spinner {
+  display: inline-block;
   width: 24px;
   height: 24px;
   border: 3px solid #f0f0f0;
   border-top-color: #249df1;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+}
+
+/* Small spinner for buttons */
+.btn .spinner {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+  vertical-align: middle;
+}
+
+.btn-primary .spinner {
+  border-color: rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+}
+
+.btn-secondary .spinner {
+  border-color: #ddd;
+  border-top-color: #666;
 }
 
 @keyframes spin {

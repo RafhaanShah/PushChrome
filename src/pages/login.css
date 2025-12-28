@@ -44,8 +44,13 @@
   border-width: 2px;
 }
 
-/* 2FA Section & Device Section */
-.twofa-notice,
+.label-hint {
+  font-weight: normal;
+  color: #999;
+  font-size: 12px;
+}
+
+/* Device Section */
 .device-notice {
   background: #f0f7ff;
   border: 1px solid #cce5ff;
@@ -55,24 +60,6 @@
   text-align: center;
 }
 
-.twofa-notice p {
-  font-size: 13px;
-  color: #004085;
-  margin: 0;
-}
-
-.twofa-notice p + p {
-  margin-top: 4px;
-}
-
-#twofa-code {
-  text-align: center;
-  font-size: 18px;
-  letter-spacing: 4px;
-  font-family: monospace;
-}
-
-#back-btn,
 #device-back-btn {
   margin-top: 8px;
 }
