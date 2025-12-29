@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - Pushover</title>
   <link rel="stylesheet" href="../styles/common.css">
-  <link rel="stylesheet" href="login.css">
+  <link rel="stylesheet" href="../styles/login.css">
 </head>
 <body>
   <div class="container login-container">
@@ -65,12 +65,14 @@
 
       <!-- Device Registration Section (hidden by default) -->
       <div id="device-section" class="hidden">
-        <div class="device-notice">
-          <p>Choose a name for this device.</p>
-          <p class="device-manage-hint">
-            You can view and delete existing devices at 
-            <a href="https://pushover.net/" target="_blank" rel="noopener">pushover.net</a>
-          </p>
+        <div class="banner banner-info">
+          <div class="banner-content">
+            <span class="banner-text">
+              Choose a name for this device.
+              You can view and delete existing devices at 
+              <a href="https://pushover.net/" target="_blank" rel="noopener">pushover.net</a>
+            </span>
+          </div>
         </div>
 
         <div class="form-group">
@@ -83,7 +85,7 @@
             pattern="[A-Za-z0-9_\-]+"
             placeholder="chrome-extension"
           >
-          <p class="form-hint">Letters, numbers, dashes, and underscores only (max 25 chars)</p>
+          <p class="hint">Letters, numbers, dashes, and underscores only (max 25 chars)</p>
         </div>
 
         <button type="submit" id="register-btn" class="btn btn-primary btn-block">
@@ -99,7 +101,9 @@
       </div>
 
       <!-- Error Message -->
-      <div id="error-message" class="error-message hidden"></div>
+      <div id="error-message" class="banner banner-error hidden">
+        <span id="error-text"></span>
+      </div>
     </form>
 
     <footer class="login-footer">
@@ -107,7 +111,7 @@
         Don't have an account? 
         <a href="https://pushover.net/signup" target="_blank" rel="noopener">Sign up at Pushover.net</a>
       </p>
-      <p class="license-notice">
+      <p class="hint hint-muted">
         Requires a <a href="https://pushover.net/clients/desktop" target="_blank" rel="noopener">Pushover Desktop License</a>
       </p>
       <p class="sendonly-link">

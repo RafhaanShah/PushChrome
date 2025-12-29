@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Settings - Pushover</title>
   <link rel="stylesheet" href="../styles/common.css">
-  <link rel="stylesheet" href="settings.css">
+  <link rel="stylesheet" href="../styles/settings.css">
 </head>
 <body>
   <div class="container settings-container">
@@ -15,7 +15,7 @@
 
     <main id="content">
       <!-- Account Section -->
-      <section class="settings-section">
+      <section class="section">
         <h2>Account</h2>
         <div class="account-info">
           <div class="account-row">
@@ -31,7 +31,7 @@
           Logout
         </button>
         <div id="login-prompt" class="hidden">
-          <p class="section-hint">Log in to receive messages on this device.</p>
+          <p class="hint">Log in to receive messages on this device.</p>
           <button id="login-btn" class="btn btn-primary btn-block">
             Log In
           </button>
@@ -39,9 +39,9 @@
       </section>
 
       <!-- Send Message Config Section -->
-      <section class="settings-section">
+      <section class="section">
         <h2>Send Message Credentials</h2>
-        <p class="section-hint">
+        <p class="hint">
           Required to send messages. Get your API token from 
           <a href="https://pushover.net/apps/build" target="_blank" rel="noopener">pushover.net/apps/build</a>
         </p>
@@ -64,7 +64,7 @@
             placeholder="Your user key"
             maxlength="30"
           >
-          <p class="field-hint">
+          <p class="hint">
             Get your User Key from <a href="https://pushover.net/" target="_blank" rel="noopener">pushover.net</a>
           </p>
         </div>
@@ -79,7 +79,7 @@
       </section>
 
       <!-- Preferences Section -->
-      <section class="settings-section">
+      <section class="section">
         <h2>Preferences</h2>
 
         <div id="receive-settings">
@@ -158,13 +158,13 @@
     </main>
 
     <!-- Sticky Save Button -->
-    <div class="save-section">
+    <div class="sticky-action">
       <button id="save-btn" class="btn btn-primary btn-block">
         <span class="btn-text">Save Settings</span>
         <span class="btn-loading hidden">
           <span class="spinner"></span>
         </span>
-        <span class="btn-success hidden">✓ Saved!</span>
+        <span class="btn-success hidden">✅ Saved!</span>
       </button>
     </div>
   </div>

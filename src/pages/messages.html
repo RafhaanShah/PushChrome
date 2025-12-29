@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PushChrome</title>
   <link rel="stylesheet" href="../styles/common.css">
-  <link rel="stylesheet" href="messages.css">
+  <link rel="stylesheet" href="../styles/messages.css">
 </head>
 <body>
   <div class="container">
@@ -13,14 +13,14 @@
       <!-- Header content rendered by header.js -->
     </header>
 
-    <div id="error-banner" class="error-banner hidden">
-      <div class="error-banner-content">
-        <span class="error-banner-icon">⚠️</span>
-        <span id="error-banner-text">Error message here</span>
+    <div id="error-banner" class="banner banner-warning hidden">
+      <div class="banner-content">
+        <span class="banner-icon">⚠️</span>
+        <span id="error-banner-text" class="banner-text">Error message here</span>
       </div>
-      <div class="error-banner-actions">
+      <div class="banner-actions">
         <button id="error-banner-action" class="btn btn-small">Fix</button>
-        <button id="error-banner-dismiss" class="error-banner-close" title="Dismiss">✕</button>
+        <button id="error-banner-dismiss" class="banner-close" title="Dismiss">❌</button>
       </div>
     </div>
 
@@ -29,8 +29,8 @@
         <div class="spinner"></div>
       </div>
 
-      <div id="login-prompt" class="empty-state hidden">
-        <div class="empty-icon">🔐</div>
+      <div id="login-prompt" class="state-container hidden">
+        <div class="state-icon">🔐</div>
         <h2>Sign in to view messages</h2>
         <p>Connect your Pushover account to receive and view notifications.</p>
         <button id="login-btn" class="btn btn-primary">Sign In</button>
@@ -38,15 +38,15 @@
 
       <div id="messages-container" class="hidden">
         <div id="message-list" class="message-list"></div>
-        <div id="empty-messages" class="empty-state hidden">
-          <div class="empty-icon">📭</div>
+        <div id="empty-messages" class="state-container hidden">
+          <div class="state-icon">📭</div>
           <h2>No messages yet</h2>
           <p>When you receive notifications, they'll appear here.</p>
         </div>
       </div>
 
-      <div id="error-state" class="error-state hidden">
-        <div class="empty-icon">⚠️</div>
+      <div id="error-state" class="state-container hidden">
+        <div class="state-icon">⚠️</div>
         <h2>Something went wrong</h2>
         <p id="error-text"></p>
         <button id="retry-btn" class="btn btn-secondary">Try Again</button>

@@ -1,0 +1,79 @@
+/* =============================================================================
+   Settings Page Styles
+   ============================================================================= */
+
+/* Account Info */
+.account-info {
+  background: #f8f8f8;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.account-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.account-row + .account-row {
+  border-top: 1px solid #e8e8e8;
+  margin-top: 4px;
+  padding-top: 8px;
+}
+
+.account-label {
+  font-size: 13px;
+  color: #666;
+}
+
+.account-value {
+  font-size: 13px;
+  font-family: monospace;
+  color: #333;
+  word-break: break-all;
+}
+
+/* Validate Result */
+.validate-result {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.validate-result.success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.validate-result.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+/* Form adjustments */
+.section .form-group {
+  margin-bottom: 12px;
+}
+
+.section > .form-group:last-child {
+  margin-bottom: 0;
+}
+
+#receive-settings {
+  margin-bottom: 12px;
+}
+
+/* Save button success state */
+#save-btn.success {
+  background: #22c55e;
+}
+
+#save-btn .btn-success {
+  color: white;
+}

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Send Message - Pushover</title>
   <link rel="stylesheet" href="../styles/common.css">
-  <link rel="stylesheet" href="send.css">
+  <link rel="stylesheet" href="../styles/send.css">
 </head>
 <body>
   <div class="container send-container">
@@ -15,9 +15,11 @@
 
     <main id="content">
       <!-- Credentials Warning -->
-      <div id="credentials-warning" class="warning-banner hidden">
-        <p>Send credentials not configured.</p>
-        <a href="settings.html">Configure in Settings →</a>
+      <div id="credentials-warning" class="banner banner-warning hidden">
+        <div class="banner-content">
+          <span class="banner-icon">⚠️</span>
+          <span class="banner-text">Send credentials not configured. <a href="settings.html">Configure in Settings →</a></span>
+        </div>
       </div>
 
       <form id="send-form">
@@ -56,7 +58,7 @@
               <option value="">All devices</option>
             </select>
             <button type="button" id="refresh-devices-btn" class="icon-btn" title="Refresh device list">
-              <span class="refresh-icon">↻</span>
+              <span class="icon-refresh">🔄</span>
             </button>
           </div>
         </div>
@@ -142,10 +144,7 @@
               class="hidden"
             >
             <button type="button" id="attachment-btn" class="btn btn-secondary attachment-btn">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M4.502 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
-                <path d="M14.002 13a2 2 0 0 1-2 2h-10a2 2 0 0 1-2-2V5A2 2 0 0 1 2 3h10a2 2 0 0 1 2 2v8a1 1 0 0 0-1-1H1a1 1 0 0 0-1 1v8zm-10.002 1-1.5-2-2 2.5h11l-4-5-2 2.5-1.5-2z"/>
-              </svg>
+              <span>🖼️</span>
               <span>Choose Image</span>
             </button>
             <div id="attachment-preview" class="attachment-preview hidden">
@@ -154,23 +153,25 @@
                 <span id="attachment-name" class="attachment-name"></span>
                 <span id="attachment-size" class="attachment-size"></span>
               </div>
-              <button type="button" id="attachment-remove" class="icon-btn attachment-remove" title="Remove attachment">✕</button>
+              <button type="button" id="attachment-remove" class="icon-btn attachment-remove" title="Remove attachment">❌</button>
             </div>
           </div>
-          <div class="attachment-hint">Images only</div>
+          <div class="hint">Images only</div>
         </div>
 
       </form>
     </main>
 
     <!-- Sticky Send Section -->
-    <div class="send-section">
+    <div class="sticky-action">
       <!-- Error Display -->
-      <div id="error-message" class="error-banner hidden"></div>
+      <div id="error-message" class="banner banner-error hidden">
+        <span id="error-text"></span>
+      </div>
 
       <!-- Success Display -->
-      <div id="success-message" class="success-banner hidden">
-        ✓ Message sent successfully!
+      <div id="success-message" class="banner banner-success hidden">
+        <span>✅ Message sent successfully!</span>
       </div>
 
       <button type="submit" form="send-form" id="send-btn" class="btn btn-primary btn-block" disabled>
