@@ -1,6 +1,6 @@
 // Common header component for all pages
 import { $ } from './utils.js';
-import { Page, navigateTo, isPopupMode, openInWindow } from './navigation.js';
+import { Page, navigateTo, isPopupMode, openPageInWindow } from './navigation.js';
 
 const ICONS = {
   messages: `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -74,7 +74,7 @@ function initHeader(options) {
   // Popout button (only shown in popup mode)
   if (isPopupMode()) {
     const popoutBtn = createIconButton('popout-btn', ICONS.popout, 'Open in new window');
-    popoutBtn.addEventListener('click', () => openInWindow(currentPage));
+    popoutBtn.addEventListener('click', () => openPageInWindow(currentPage));
     headerActions.appendChild(popoutBtn);
   }
 
@@ -118,4 +118,4 @@ function createIconButton(id, iconHtml, title) {
   return btn;
 }
 
-export { initHeader, ICONS, isPopupMode, openInWindow, Page };
+export { initHeader, ICONS, isPopupMode, openPageInWindow, Page };

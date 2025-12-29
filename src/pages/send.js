@@ -44,7 +44,7 @@ let attachmentData = null; // { buffer: ArrayBuffer, type: string, name: string 
 let settings = null;
 
 async function init() {
-  initWindowMode();
+  await initWindowMode(Page.SEND);
   initHeader({
     title: 'Send Message',
     currentPage: Page.SEND,

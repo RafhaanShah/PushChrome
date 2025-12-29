@@ -20,8 +20,8 @@ const elements = {
 
 let pendingLoginResult = null;
 
-function init() {
-  initWindowMode();
+async function init() {
+  await initWindowMode(Page.LOGIN, true);
   elements.form = $('#login-form');
   elements.credentialsSection = $('#credentials-section');
   elements.deviceSection = $('#device-section');

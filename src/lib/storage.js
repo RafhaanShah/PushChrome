@@ -21,7 +21,8 @@ const DEFAULT_SETTINGS = {
   badgeEnabled: true,
   maxMessages: 50,
   markAsReadOnOpen: true,
-  verboseLogging: false
+  verboseLogging: false,
+  alwaysPopOut: false
 };
 
 // =============================================================================
@@ -52,18 +53,18 @@ export async function isSendOnlyMode() {
 }
 
 // =============================================================================
-// Settings Storage (chrome.storage.sync - synced across devices)
+// Settings Storage (chrome.storage.local)
 // =============================================================================
 
 export async function getSettings() {
-  const result = await chrome.storage.sync.get(STORAGE_KEYS.SETTINGS);
+  const result = await chrome.storage.local.get(STORAGE_KEYS.SETTINGS);
   return { ...DEFAULT_SETTINGS, ...result[STORAGE_KEYS.SETTINGS] };
 }
 
 export async function saveSettings(settings) {
   const current = await getSettings();
   const updated = { ...current, ...settings };
-  await chrome.storage.sync.set({ [STORAGE_KEYS.SETTINGS]: updated });
+  await chrome.storage.local.set({ [STORAGE_KEYS.SETTINGS]: updated });
   return updated;
 }
 

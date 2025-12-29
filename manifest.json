@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Pushover Client",
+  "name": "PushChrome",
   "version": "1.0.0",
-  "description": "Unofficial Pushover client for Chrome - view, send, and receive push notifications",
+  "description": "Unofficial Pushover Browser Extension - view, send, and receive messages directly from your browser.",
 
   "permissions": [
     "storage",
@@ -21,7 +21,7 @@
   },
 
   "action": {
-    "default_popup": "src/popup/popup.html",
+    "default_popup": "src/pages/root.html",
     "default_icon": {
       "16": "src/icons/icon-16.png",
       "48": "src/icons/icon-48.png",
