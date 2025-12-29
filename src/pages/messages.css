@@ -1,17 +1,9 @@
 /* Messages Page Styles */
 
-body {
-  min-width: 380px;
-  max-width: 420px;
-  max-height: 520px;
-  overflow: hidden;
-}
-
 .container {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  max-height: 520px;
+  min-height: 100%;
 }
 
 /* Error Banner */
@@ -90,74 +82,16 @@ body {
 
 /* Header */
 .header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 12px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #fff;
   flex-shrink: 0;
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.header-left h1 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.header-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.icon-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.icon-btn:hover {
-  background: #f3f4f6;
-  color: #1f2937;
-}
-
-.icon-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.refresh-icon {
-  transition: transform 0.3s ease;
-}
-
-.refresh-icon.spinning {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+.header h1 {
+  flex: 1;
 }
 
 /* Main Content */
 #content {
   flex: 1;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -165,7 +99,6 @@ body {
 /* Message Container */
 #messages-container {
   flex: 1;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -173,7 +106,6 @@ body {
 /* Message List */
 .message-list {
   flex: 1;
-  overflow-y: auto;
   padding: 8px;
 }
 
@@ -546,24 +478,4 @@ body {
   background: #9ca3af;
 }
 
-/* Tab Mode - messages-specific overrides */
-body.window-mode {
-  overflow: auto;
-}
 
-body.window-mode .container {
-  max-height: none;
-  height: auto;
-}
-
-body.window-mode #content {
-  overflow: visible;
-}
-
-body.window-mode #messages-container {
-  overflow: visible;
-}
-
-body.window-mode .message-list {
-  overflow: visible;
-}

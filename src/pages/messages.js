@@ -39,23 +39,18 @@ function setupEventListeners() {
   $('#error-banner-dismiss')?.addEventListener('click', dismissErrorBanner);
   
   // Save scroll position on page unload/visibility change
-  const messageList = $('#message-list');
-  if (messageList) {
-    messageList.addEventListener('scroll', debounce(() => {
-      storage.saveScrollPosition(messageList.scrollTop);
-    }, 100));
-  }
+  window.addEventListener('scroll', debounce(() => {
+    storage.saveScrollPosition(window.scrollY);
+  }, 100));
   
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden' && messageList) {
-      storage.saveScrollPosition(messageList.scrollTop);
+    if (document.visibilityState === 'hidden') {
+      storage.saveScrollPosition(window.scrollY);
     }
   });
   
   window.addEventListener('beforeunload', () => {
-    if (messageList) {
-      storage.saveScrollPosition(messageList.scrollTop);
-    }
+    storage.saveScrollPosition(window.scrollY);
   });
 }
 
@@ -95,8 +90,9 @@ async function checkAuthAndLoadMessages() {
   if (!hadUnreadOnOpen) {
     const savedPosition = await storage.getScrollPosition();
     if (savedPosition > 0) {
-      const messageList = $('#message-list');
-      messageList.scrollTop = savedPosition;
+      requestAnimationFrame(() => {
+        window.scrollTo(0, savedPosition);
+      });
     }
   }
   

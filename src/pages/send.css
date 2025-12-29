@@ -1,8 +1,7 @@
 /* Send Message Page Styles */
 
 .send-container {
-  max-width: 400px;
-  min-height: 400px;
+  /* inherits sizing from common.css body */
 }
 
 .header {

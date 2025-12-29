@@ -1,8 +1,7 @@
 /* Settings Page Styles */
 
 .settings-container {
-  max-width: 400px;
-  min-height: 400px;
+  /* inherits sizing from common.css body */
 }
 
 .header {
@@ -28,6 +27,8 @@
 
 .settings-section:last-of-type {
   border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .settings-section h2 {
@@ -124,7 +125,7 @@
   bottom: 0;
   background: white;
   padding: 12px;
-  margin: 0 -12px;
+  margin: 0 -12px -12px;
   border-top: 1px solid #e0e0e0;
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
 }
@@ -146,8 +147,12 @@
   margin-bottom: 12px;
 }
 
-.settings-section .form-group:last-child {
+.settings-section > .form-group:last-child {
   margin-bottom: 0;
+}
+
+#receive-settings {
+  margin-bottom: 12px;
 }
 
 .settings-section select {

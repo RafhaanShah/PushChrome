@@ -73,13 +73,12 @@ async function init() {
   elements.errorMessage = $('#error-message');
   elements.successMessage = $('#success-message');
   elements.sendBtn = $('#send-btn');
+  elements.message.focus();
 
   await loadSettings();
   await loadDevices();
   await loadSendPreferences();
   bindEvents();
-  
-  elements.message.focus();
 }
 
 async function loadSettings() {

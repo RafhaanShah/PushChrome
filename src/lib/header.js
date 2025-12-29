@@ -55,21 +55,21 @@ function initHeader(options) {
   h1.textContent = title;
   headerLeft.appendChild(h1);
 
-  // Add page-specific action buttons
-  const pageActionButtons = {};
-  for (const action of pageActions) {
-    const btn = createIconButton(action.id, action.icon, action.title);
-    if (action.hidden) btn.classList.add('hidden');
-    if (action.onClick) btn.addEventListener('click', action.onClick);
-    headerLeft.appendChild(btn);
-    pageActionButtons[action.id] = btn;
-  }
-
   header.appendChild(headerLeft);
 
   // Create header actions section (nav buttons)
   const headerActions = document.createElement('div');
   headerActions.className = 'header-actions';
+
+  // Add page-specific action buttons first (on the left of nav buttons)
+  const pageActionButtons = {};
+  for (const action of pageActions) {
+    const btn = createIconButton(action.id, action.icon, action.title);
+    if (action.hidden) btn.classList.add('hidden');
+    if (action.onClick) btn.addEventListener('click', action.onClick);
+    headerActions.appendChild(btn);
+    pageActionButtons[action.id] = btn;
+  }
 
   // Popout button (only shown in popup mode)
   if (isPopupMode()) {
