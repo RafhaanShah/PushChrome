@@ -3,13 +3,12 @@ import { validateCredentials } from '../lib/api.js';
 import { getSession, getSettings, saveSettings, saveDevices, clearAll, applyMessageLimit } from '../lib/storage.js';
 import { $ } from '../lib/utils.js';
 import { logger } from '../lib/logger.js';
-import { Page, navigateTo, initTabMode } from '../lib/navigation.js';
+import { Page, navigateTo, initWindowMode } from '../lib/navigation.js';
+import { initHeader } from '../lib/header.js';
 
 let isLoggedIn = false;
 
 const elements = {
-  messagesBtn: null,
-  sendBtn: null,
   deviceName: null,
   userId: null,
   logoutBtn: null,
@@ -32,9 +31,11 @@ const elements = {
 };
 
 async function init() {
-  initTabMode();
-  elements.messagesBtn = $('#messages-btn');
-  elements.sendBtn = $('#send-btn');
+  initWindowMode();
+  initHeader({
+    title: 'Settings',
+    currentPage: Page.SETTINGS,
+  });
   elements.deviceName = $('#device-name');
   elements.userId = $('#user-id');
   elements.logoutBtn = $('#logout-btn');
@@ -68,7 +69,6 @@ async function loadAccountInfo() {
     elements.deviceName.textContent = session.deviceName || '-';
     elements.userId.textContent = session.userId || '-';
     elements.userKey.value = session.userId;
-    elements.messagesBtn.classList.remove('hidden');
     elements.logoutBtn.classList.remove('hidden');
   } else {
     isLoggedIn = false;
@@ -95,8 +95,6 @@ async function loadSettings() {
 }
 
 function bindEvents() {
-  elements.messagesBtn.addEventListener('click', () => navigateTo(Page.MESSAGES));
-  elements.sendBtn.addEventListener('click', () => navigateTo(Page.SEND));
   elements.logoutBtn.addEventListener('click', handleLogout);
   elements.loginBtn.addEventListener('click', () => navigateTo(Page.LOGIN));
   elements.validateBtn.addEventListener('click', handleValidate);

@@ -547,23 +547,23 @@ body {
 }
 
 /* Tab Mode - messages-specific overrides */
-body.tab-mode {
+body.window-mode {
   overflow: auto;
 }
 
-body.tab-mode .container {
+body.window-mode .container {
   max-height: none;
   height: auto;
 }
 
-body.tab-mode #content {
+body.window-mode #content {
   overflow: visible;
 }
 
-body.tab-mode #messages-container {
+body.window-mode #messages-container {
   overflow: visible;
 }
 
-body.tab-mode .message-list {
+body.window-mode .message-list {
   overflow: visible;
 }

@@ -33,6 +33,17 @@ body {
   font-weight: 600;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 4px;
+}
+
 .icon-btn {
   background: none;
   border: none;
@@ -160,6 +171,14 @@ body {
   to { transform: rotate(360deg); }
 }
 
+.refresh-icon {
+  transition: transform 0.3s ease;
+}
+
+.refresh-icon.spinning {
+  animation: spin 1s linear infinite;
+}
+
 .hidden {
   display: none !important;
 }
@@ -168,24 +187,24 @@ body {
    Tab Mode (pop-out window)
    ============================================================================= */
 
-body.tab-mode {
+body.window-mode {
   max-width: none;
   max-height: none;
   min-height: 100vh;
 }
 
-body.tab-mode .container {
+body.window-mode .container {
   max-width: 600px;
   max-height: none;
   margin: 0 auto;
   min-height: 100vh;
 }
 
-body.tab-mode .empty-state,
-body.tab-mode .error-state {
+body.window-mode .empty-state,
+body.window-mode .error-state {
   padding: 80px 24px;
 }
 
-body.tab-mode .empty-icon {
+body.window-mode .empty-icon {
   font-size: 64px;
 }

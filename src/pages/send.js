@@ -1,12 +1,11 @@
 // Pushover Chrome Extension - Send Message Page
-import { getSettings, getDevices, getSendPreferences, saveSendPreferences, isLoggedIn } from '../lib/storage.js';
+import { getSettings, getDevices, getSendPreferences, saveSendPreferences } from '../lib/storage.js';
 import { $ } from '../lib/utils.js';
 import { logger } from '../lib/logger.js';
-import { Page, navigateTo, initTabMode } from '../lib/navigation.js';
+import { initWindowMode } from '../lib/navigation.js';
+import { initHeader, Page } from '../lib/header.js';
 
 const elements = {
-  messagesBtn: null,
-  settingsBtn: null,
   credentialsWarning: null,
   form: null,
   message: null,
@@ -45,9 +44,11 @@ let attachmentData = null; // { buffer: ArrayBuffer, type: string, name: string 
 let settings = null;
 
 async function init() {
-  initTabMode();
-  elements.messagesBtn = $('#messages-btn');
-  elements.settingsBtn = $('#settings-btn');
+  initWindowMode();
+  initHeader({
+    title: 'Send Message',
+    currentPage: Page.SEND,
+  });
   elements.credentialsWarning = $('#credentials-warning');
   elements.form = $('#send-form');
   elements.message = $('#message');
@@ -86,10 +87,6 @@ async function loadSettings() {
     elements.credentialsWarning.classList.remove('hidden');
   }
   
-  if (await isLoggedIn()) {
-    elements.messagesBtn.classList.remove('hidden');
-  }
-  
   validateForm();
 }
 
@@ -119,8 +116,6 @@ async function loadSendPreferences() {
 }
 
 function bindEvents() {
-  elements.messagesBtn.addEventListener('click', () => navigateTo(Page.MESSAGES));
-  elements.settingsBtn.addEventListener('click', () => navigateTo(Page.SETTINGS));
   elements.message.addEventListener('input', handleInput);
   elements.title.addEventListener('input', handleInput);
   elements.url.addEventListener('input', handleInput);

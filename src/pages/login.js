@@ -2,7 +2,7 @@
 import { login, registerDevice } from '../lib/api.js';
 import { saveSession, isLoggedIn, getPendingLogin, savePendingLogin, clearPendingLogin, getPendingEmail, savePendingEmail, clearPendingEmail } from '../lib/storage.js';
 import { generateDeviceName, $ } from '../lib/utils.js';
-import { Page, navigateTo, initTabMode } from '../lib/navigation.js';
+import { Page, navigateTo, initWindowMode } from '../lib/navigation.js';
 
 const elements = {
   form: null,
@@ -21,7 +21,7 @@ const elements = {
 let pendingLoginResult = null;
 
 function init() {
-  initTabMode();
+  initWindowMode();
   elements.form = $('#login-form');
   elements.credentialsSection = $('#credentials-section');
   elements.deviceSection = $('#device-section');

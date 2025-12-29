@@ -4,34 +4,34 @@ import * as storage from '../lib/storage.js';
 import * as api from '../lib/api.js';
 import { $, escapeHtml, formatRelativeTime, getPriorityClass, getPriorityLabel, linkifyText } from '../lib/utils.js';
 import { logger } from '../lib/logger.js';
-import { Page, navigateTo, initTabMode, isPopupMode, openInTab } from '../lib/navigation.js';
+import { Page, navigateTo, initWindowMode } from '../lib/navigation.js';
+import { initHeader, ICONS } from '../lib/header.js';
 
 let isRefreshing = false;
 let settings = null;
+let headerController = null;
 
 async function init() {
+  initWindowMode();
+  
+  headerController = initHeader({
+    title: 'PushChrome',
+    currentPage: Page.MESSAGES,
+    pageActions: [
+      { id: 'refresh-btn', icon: ICONS.refresh, title: 'Refresh messages', onClick: () => refreshMessages(false) },
+      { id: 'mark-read-btn', icon: ICONS.markRead, title: 'Mark all as read', onClick: handleMarkAllRead, hidden: true },
+    ],
+  });
+  
   setupEventListeners();
   setupMessageListener();
-  setupPopoutMode();
   await checkErrorState();
   await checkAuthAndLoadMessages();
 }
 
-function setupPopoutMode() {
-  initTabMode();
-  if (!isPopupMode()) {
-    $('#popout-btn').classList.add('hidden');
-  }
-}
-
 function setupEventListeners() {
-  $('#settings-btn').addEventListener('click', () => navigateTo(Page.SETTINGS));
-  $('#send-btn').addEventListener('click', () => navigateTo(Page.SEND));
-  $('#popout-btn').addEventListener('click', openInTab);
-  $('#refresh-btn').addEventListener('click', () => refreshMessages(false)); // Manual: no debounce
   $('#login-btn')?.addEventListener('click', () => navigateTo(Page.LOGIN));
-  $('#retry-btn')?.addEventListener('click', () => refreshMessages(false)); // Manual: no debounce
-  $('#mark-read-btn').addEventListener('click', handleMarkAllRead);
+  $('#retry-btn')?.addEventListener('click', () => refreshMessages(false));
   
   // Error banner actions
   $('#error-banner-action')?.addEventListener('click', handleErrorAction);
@@ -280,15 +280,17 @@ async function refreshMessages(checkDebounce = false) {
 }
 
 function setRefreshingState(refreshing) {
-  const btn = $('#refresh-btn');
+  const btn = headerController?.getButton('refresh-btn');
+  if (!btn) return;
+  
   const icon = btn.querySelector('.refresh-icon');
 
   if (refreshing) {
     btn.disabled = true;
-    icon.classList.add('spinning');
+    icon?.classList.add('spinning');
   } else {
     btn.disabled = false;
-    icon.classList.remove('spinning');
+    icon?.classList.remove('spinning');
   }
 }
 
@@ -313,11 +315,13 @@ async function handleMarkAllRead() {
 }
 
 function updateMarkReadButton() {
-  const btn = $('#mark-read-btn');
-  
   // Show if there are any unread messages
   storage.getUnreadCount().then(count => {
-    btn.classList.toggle('hidden', count === 0);
+    if (count > 0) {
+      headerController?.showButton('mark-read-btn');
+    } else {
+      headerController?.hideButton('mark-read-btn');
+    }
   });
 }
 

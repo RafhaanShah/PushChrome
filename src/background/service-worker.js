@@ -18,7 +18,7 @@ import {
   markAllRead
 } from '../lib/storage.js';
 import { fetchMessages, deleteMessages, sendMessage, createWebSocketConnection, validateCredentials, ERROR_TYPES } from '../lib/api.js';
-import { getPopupUrl, openPopupInTab, openUrlInTab } from '../lib/navigation.js';
+import { Page, getPopupUrl, openPopupInWindow, openUrlInWindow } from '../lib/navigation.js';
 import { logger } from '../lib/logger.js';
 
 const MESSAGE_REFRESH_ALARM_NAME = 'refreshMessages';
@@ -343,15 +343,15 @@ async function buildContextMenus() {
   // Browser action context menu items (right-click on extension icon)
   chrome.contextMenus.create({
     id: 'pop-out',
-    title: 'Open in New Tab',
-    contexts: ['action']
-  });
-  chrome.contextMenus.create({
-    id: 'mark-all-read',
-    title: 'Mark All as Read',
+    title: 'Pop-Out',
     contexts: ['action']
   });
   if (session?.secret && session?.deviceId) {
+    chrome.contextMenus.create({
+      id: 'mark-all-read',
+      title: 'Mark All as Read',
+      contexts: ['action']
+    });
     chrome.contextMenus.create({
       id: 'refresh-messages',
       title: 'Refresh Messages',
@@ -366,6 +366,12 @@ async function buildContextMenus() {
       contexts: ['action']
     });
   }
+
+  chrome.contextMenus.create({
+    id: 'open-settings',
+    title: 'Settings',
+    contexts: ['action']
+  });
   
   // Only show send menus if send credentials are configured
   if (!settings.apiToken || !settings.userKey) {
@@ -456,7 +462,13 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   
   if (menuId === 'pop-out') {
     logger.debug('Pop-out triggered from context menu');
-    openPopupInTab();
+    openPopupInWindow();
+    return;
+  }
+  
+  if (menuId === 'open-settings') {
+    logger.debug('Settings triggered from context menu');
+    chrome.windows.create({ url: chrome.runtime.getURL('src/pages/settings.html'), type: 'popup' });
     return;
   }
   
@@ -728,7 +740,7 @@ chrome.notifications.onClicked.addListener(async (notificationId) => {
     
     // Open URL if present
     if (message?.url) {
-      await openUrlInTab(message.url);
+      await openUrlInWindow(message.url);
     }
     
     // Mark as read and dismiss

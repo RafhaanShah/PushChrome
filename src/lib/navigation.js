@@ -20,11 +20,11 @@ const POPUP_PAGE_PATHS = {
 };
 
 function navigateTo(page, options = {}) {
-    const { replace = false, fromPopup = false, newTab = false } = options;
+    const { replace = false, fromPopup = false, newWindow = false } = options;
     const path = fromPopup ? POPUP_PAGE_PATHS[page] : PAGE_PATHS[page];
 
-    if (newTab) {
-        chrome.tabs.create({ url: chrome.runtime.getURL(`src/pages/${PAGE_PATHS[page]}`) });
+    if (newWindow) {
+        chrome.windows.create({ url: chrome.runtime.getURL(`src/pages/${PAGE_PATHS[page]}`), type: 'popup' });
         return;
     }
 
@@ -43,22 +43,23 @@ function getPopupUrl() {
     return chrome.runtime.getURL('src/popup/popup.html');
 }
 
-function openInTab() {
-    chrome.tabs.create({ url: getPopupUrl() });
+function openInWindow(page) {
+    const url = page ? chrome.runtime.getURL(`src/pages/${PAGE_PATHS[page]}`) : getPopupUrl();
+    chrome.windows.create({ url, type: 'popup' });
     window.close();
 }
 
-function openPopupInTab() {
-    chrome.tabs.create({ url: getPopupUrl() });
+function openPopupInWindow() {
+    chrome.windows.create({ url: getPopupUrl(), type: 'popup' });
 }
 
-function openUrlInTab(url) {
-    chrome.tabs.create({ url });
+function openUrlInWindow(url) {
+    chrome.windows.create({ url, type: 'popup' });
 }
 
-function initTabMode() {
+function initWindowMode() {
     if (!isPopupMode()) {
-        document.body.classList.add('tab-mode');
+        document.body.classList.add('window-mode');
     }
 }
 
@@ -67,8 +68,8 @@ export {
     navigateTo,
     isPopupMode,
     getPopupUrl,
-    openInTab,
-    openPopupInTab,
-    openUrlInTab,
-    initTabMode,
+    openInWindow,
+    openPopupInWindow,
+    openUrlInWindow,
+    initWindowMode,
 };
