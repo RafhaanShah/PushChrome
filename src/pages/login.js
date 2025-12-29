@@ -2,7 +2,7 @@
 import { login, registerDevice } from '../lib/api.js';
 import { saveSession, isLoggedIn, getPendingLogin, savePendingLogin, clearPendingLogin, getPendingEmail, savePendingEmail, clearPendingEmail } from '../lib/storage.js';
 import { generateDeviceName, $ } from '../lib/utils.js';
-import { initTabMode } from '../lib/tab-mode.js';
+import { Page, navigateTo, initTabMode } from '../lib/navigation.js';
 
 const elements = {
   form: null,
@@ -216,7 +216,7 @@ function hideError() {
 }
 
 function redirectToSettings() {
-  window.location.href = 'settings.html';
+  navigateTo(Page.SETTINGS);
 }
 
 document.addEventListener('DOMContentLoaded', init);

@@ -1,8 +1,8 @@
 // Pushover Chrome Extension - Send Message Page
 import { getSettings, getDevices, getSendPreferences, saveSendPreferences, isLoggedIn } from '../lib/storage.js';
-import { $, isPopupMode } from '../lib/utils.js';
-import { initTabMode } from '../lib/tab-mode.js';
+import { $ } from '../lib/utils.js';
 import { logger } from '../lib/logger.js';
+import { Page, navigateTo, initTabMode } from '../lib/navigation.js';
 
 const elements = {
   messagesBtn: null,
@@ -119,12 +119,8 @@ async function loadSendPreferences() {
 }
 
 function bindEvents() {
-  elements.messagesBtn.addEventListener('click', () => {
-    window.location.href = 'messages.html';
-  });
-  elements.settingsBtn.addEventListener('click', () => {
-    window.location.href = 'settings.html';
-  });
+  elements.messagesBtn.addEventListener('click', () => navigateTo(Page.MESSAGES));
+  elements.settingsBtn.addEventListener('click', () => navigateTo(Page.SETTINGS));
   elements.message.addEventListener('input', handleInput);
   elements.title.addEventListener('input', handleInput);
   elements.url.addEventListener('input', handleInput);

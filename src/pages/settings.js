@@ -2,8 +2,8 @@
 import { validateCredentials } from '../lib/api.js';
 import { getSession, getSettings, saveSettings, saveDevices, clearAll, applyMessageLimit } from '../lib/storage.js';
 import { $ } from '../lib/utils.js';
-import { initTabMode } from '../lib/tab-mode.js';
 import { logger } from '../lib/logger.js';
+import { Page, navigateTo, initTabMode } from '../lib/navigation.js';
 
 let isLoggedIn = false;
 
@@ -95,16 +95,10 @@ async function loadSettings() {
 }
 
 function bindEvents() {
-  elements.messagesBtn.addEventListener('click', () => {
-    window.location.href = 'messages.html';
-  });
-  elements.sendBtn.addEventListener('click', () => {
-    window.location.href = 'send.html';
-  });
+  elements.messagesBtn.addEventListener('click', () => navigateTo(Page.MESSAGES));
+  elements.sendBtn.addEventListener('click', () => navigateTo(Page.SEND));
   elements.logoutBtn.addEventListener('click', handleLogout);
-  elements.loginBtn.addEventListener('click', () => {
-    window.location.href = 'login.html';
-  });
+  elements.loginBtn.addEventListener('click', () => navigateTo(Page.LOGIN));
   elements.validateBtn.addEventListener('click', handleValidate);
   elements.saveBtn.addEventListener('click', handleSave);
 }
@@ -115,7 +109,7 @@ async function handleLogout() {
   }
 
   await clearAll();
-  window.location.href = 'login.html';
+  navigateTo(Page.LOGIN);
 }
 
 async function handleValidate() {

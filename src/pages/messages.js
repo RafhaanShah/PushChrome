@@ -2,9 +2,9 @@
 
 import * as storage from '../lib/storage.js';
 import * as api from '../lib/api.js';
-import { $, escapeHtml, formatRelativeTime, getPriorityClass, getPriorityLabel, linkifyText, isPopupMode, openInTab } from '../lib/utils.js';
-import { initTabMode } from '../lib/tab-mode.js';
+import { $, escapeHtml, formatRelativeTime, getPriorityClass, getPriorityLabel, linkifyText } from '../lib/utils.js';
 import { logger } from '../lib/logger.js';
+import { Page, navigateTo, initTabMode, isPopupMode, openInTab } from '../lib/navigation.js';
 
 let isRefreshing = false;
 let settings = null;
@@ -25,20 +25,11 @@ function setupPopoutMode() {
 }
 
 function setupEventListeners() {
-  $('#settings-btn').addEventListener('click', () => {
-    window.location.href = 'settings.html';
-  });
-
-  $('#send-btn').addEventListener('click', () => {
-    window.location.href = 'send.html';
-  });
-
+  $('#settings-btn').addEventListener('click', () => navigateTo(Page.SETTINGS));
+  $('#send-btn').addEventListener('click', () => navigateTo(Page.SEND));
   $('#popout-btn').addEventListener('click', openInTab);
-
   $('#refresh-btn').addEventListener('click', () => refreshMessages(false)); // Manual: no debounce
-  $('#login-btn')?.addEventListener('click', () => {
-    window.location.href = 'login.html';
-  });
+  $('#login-btn')?.addEventListener('click', () => navigateTo(Page.LOGIN));
   $('#retry-btn')?.addEventListener('click', () => refreshMessages(false)); // Manual: no debounce
   $('#mark-read-btn').addEventListener('click', handleMarkAllRead);
   
@@ -401,9 +392,9 @@ async function handleErrorAction() {
     // Clear session and redirect to login
     await storage.clearSession();
     await storage.clearErrorState();
-    window.location.href = 'login.html';
+    navigateTo(Page.LOGIN);
   } else if (currentErrorState.type === 'send_auth') {
-    window.location.href = 'settings.html';
+    navigateTo(Page.SETTINGS);
   }
 }
 
