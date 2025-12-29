@@ -26,12 +26,13 @@ const elements = {
   notificationsEnabled: null,
   badgeEnabled: null,
   markAsReadOnOpen: null,
+  alwaysPopOut: null,
   verboseLogging: null,
   saveBtn: null
 };
 
 async function init() {
-  initWindowMode();
+  await initWindowMode(Page.SETTINGS);
   initHeader({
     title: 'Settings',
     currentPage: Page.SETTINGS,
@@ -53,6 +54,7 @@ async function init() {
   elements.notificationsEnabled = $('#notifications-enabled');
   elements.badgeEnabled = $('#badge-enabled');
   elements.markAsReadOnOpen = $('#mark-as-read-on-open');
+  elements.alwaysPopOut = $('#always-pop-out');
   elements.verboseLogging = $('#verbose-logging');
   elements.saveBtn = $('#save-btn');
 
@@ -91,6 +93,7 @@ async function loadSettings() {
   elements.notificationsEnabled.checked = settings.notificationsEnabled;
   elements.badgeEnabled.checked = settings.badgeEnabled;
   elements.markAsReadOnOpen.checked = settings.markAsReadOnOpen;
+  elements.alwaysPopOut.checked = settings.alwaysPopOut;
   elements.verboseLogging.checked = settings.verboseLogging;
 }
 
@@ -161,6 +164,7 @@ async function handleSave() {
       notificationsEnabled: elements.notificationsEnabled.checked,
       badgeEnabled: elements.badgeEnabled.checked,
       markAsReadOnOpen: elements.markAsReadOnOpen.checked,
+      alwaysPopOut: elements.alwaysPopOut.checked,
       verboseLogging: elements.verboseLogging.checked
     };
 

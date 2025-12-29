@@ -18,7 +18,7 @@ import {
   markAllRead
 } from '../lib/storage.js';
 import { fetchMessages, deleteMessages, sendMessage, createWebSocketConnection, validateCredentials, ERROR_TYPES } from '../lib/api.js';
-import { Page, getPopupUrl, openPopupInWindow, openUrlInWindow } from '../lib/navigation.js';
+import { Page, openPageInWindow, openUrlInWindow } from '../lib/navigation.js';
 import { logger } from '../lib/logger.js';
 
 const MESSAGE_REFRESH_ALARM_NAME = 'refreshMessages';
@@ -477,7 +477,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   
   if (menuId === 'pop-out') {
     logger.debug('Pop-out triggered from context menu');
-    openPopupInWindow();
+    openPageInWindow(Page.ROOT);
     return;
   }
   

@@ -13,7 +13,7 @@ let headerController = null;
 let hadUnreadOnOpen = false;
 
 async function init() {
-  initWindowMode();
+  await initWindowMode(Page.MESSAGES);
   
   headerController = initHeader({
     title: 'PushChrome',

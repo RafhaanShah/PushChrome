@@ -1,4 +1,7 @@
+import * as storage from './storage.js';
+
 const Page = {
+    ROOT: 'root',
     LOGIN: 'login',
     MESSAGES: 'messages',
     SEND: 'send',
@@ -6,27 +9,16 @@ const Page = {
 };
 
 const PAGE_PATHS = {
+    [Page.ROOT]: 'root.html',
     [Page.LOGIN]: 'login.html',
     [Page.MESSAGES]: 'messages.html',
     [Page.SEND]: 'send.html',
     [Page.SETTINGS]: 'settings.html',
 };
 
-const POPUP_PAGE_PATHS = {
-    [Page.LOGIN]: '../pages/login.html',
-    [Page.MESSAGES]: '../pages/messages.html',
-    [Page.SEND]: '../pages/send.html',
-    [Page.SETTINGS]: '../pages/settings.html',
-};
-
 function navigateTo(page, options = {}) {
-    const { replace = false, fromPopup = false, newWindow = false } = options;
-    const path = fromPopup ? POPUP_PAGE_PATHS[page] : PAGE_PATHS[page];
-
-    if (newWindow) {
-        chrome.windows.create({ url: chrome.runtime.getURL(`src/pages/${PAGE_PATHS[page]}`), type: 'popup' });
-        return;
-    }
+    const { replace = false } = options;
+    const path = PAGE_PATHS[page];
 
     if (replace) {
         window.location.replace(path);
@@ -36,30 +28,29 @@ function navigateTo(page, options = {}) {
 }
 
 function isPopupMode() {
-    return window.innerWidth < 1000 && window.innerHeight < 1000;
+    return chrome.extension.getViews({ type: 'popup' }).length > 0;
 }
 
-function getPopupUrl() {
-    return chrome.runtime.getURL('src/popup/popup.html');
-}
-
-function openInWindow(page) {
-    const url = page ? chrome.runtime.getURL(`src/pages/${PAGE_PATHS[page]}`) : getPopupUrl();
-    chrome.windows.create({ url, type: 'popup' });
+function openPageInWindow(page) {
+    const url = chrome.runtime.getURL(`src/pages/${PAGE_PATHS[page]}`);
+    openUrlInWindow(url);
     window.close();
-}
-
-function openPopupInWindow() {
-    chrome.windows.create({ url: getPopupUrl(), type: 'popup' });
 }
 
 function openUrlInWindow(url) {
     chrome.windows.create({ url, type: 'popup' });
 }
 
-function initWindowMode() {
-    if (!isPopupMode()) {
+async function initWindowMode(page, force = false) {
+    const isWindow = !isPopupMode();
+    if (isWindow) {
         document.body.classList.add('window-mode');
+        return; // already window mode
+    }
+
+    const pop = force || await storage.getSettings().alwaysPopOut;
+    if (pop) {
+        openPageInWindow(page);
     }
 }
 
@@ -67,9 +58,7 @@ export {
     Page,
     navigateTo,
     isPopupMode,
-    getPopupUrl,
-    openInWindow,
-    openPopupInWindow,
+    openPageInWindow,
     openUrlInWindow,
     initWindowMode,
 };

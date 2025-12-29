@@ -97,6 +97,17 @@
           </div>
 
           <div class="form-group">
+            <label for="device-refresh-interval">Device List Refresh Interval</label>
+            <select id="device-refresh-interval">
+              <option value="0">Manual only</option>
+              <option value="60">Every 1 hour</option>
+              <option value="120">Every 2 hours</option>
+              <option value="360">Every 6 hours</option>
+              <option value="1440">Every 24 hours</option>
+            </select>
+          </div>
+
+          <div class="form-group">
             <label for="max-messages">Max Messages to Store</label>
             <select id="max-messages">
               <option value="0">None (clear when read)</option>
@@ -129,21 +140,17 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="device-refresh-interval">Device List Refresh Interval</label>
-          <select id="device-refresh-interval">
-            <option value="0">Manual only</option>
-            <option value="60">Every 1 hour</option>
-            <option value="120">Every 2 hours</option>
-            <option value="360">Every 6 hours</option>
-            <option value="1440">Every 24 hours</option>
-          </select>
+        <div class="form-group toggle-group">
+          <label for="always-pop-out">
+            <input type="checkbox" id="always-pop-out">
+            <span>Always open in a window</span>
+          </label>
         </div>
 
         <div class="form-group toggle-group">
           <label for="verbose-logging">
             <input type="checkbox" id="verbose-logging">
-            <span>Verbose logging (for debugging)</span>
+            <span>Verbose console logging</span>
           </label>
         </div>
       </section>
