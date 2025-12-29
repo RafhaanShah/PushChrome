@@ -1,6 +1,6 @@
 // Pushover Chrome Extension - Send Message Page
 import { getSettings, getDevices, getSendPreferences, saveSendPreferences, isLoggedIn } from '../lib/storage.js';
-import { $ } from '../lib/utils.js';
+import { $, isPopupMode } from '../lib/utils.js';
 import { initTabMode } from '../lib/tab-mode.js';
 import { logger } from '../lib/logger.js';
 
@@ -21,6 +21,13 @@ const elements = {
   urlTitle: null,
   urlTitleCount: null,
   sound: null,
+  attachment: null,
+  attachmentBtn: null,
+  attachmentPreview: null,
+  attachmentThumb: null,
+  attachmentName: null,
+  attachmentSize: null,
+  attachmentRemove: null,
   errorMessage: null,
   successMessage: null,
   sendBtn: null
@@ -32,6 +39,8 @@ const LIMITS = {
   url: 512,
   urlTitle: 100
 };
+
+let attachmentData = null; // { buffer: ArrayBuffer, type: string, name: string }
 
 let settings = null;
 
@@ -53,6 +62,13 @@ async function init() {
   elements.urlTitle = $('#url-title');
   elements.urlTitleCount = $('#url-title-count');
   elements.sound = $('#sound');
+  elements.attachment = $('#attachment');
+  elements.attachmentBtn = $('#attachment-btn');
+  elements.attachmentPreview = $('#attachment-preview');
+  elements.attachmentThumb = $('#attachment-thumb');
+  elements.attachmentName = $('#attachment-name');
+  elements.attachmentSize = $('#attachment-size');
+  elements.attachmentRemove = $('#attachment-remove');
   elements.errorMessage = $('#error-message');
   elements.successMessage = $('#success-message');
   elements.sendBtn = $('#send-btn');
@@ -114,6 +130,9 @@ function bindEvents() {
   elements.url.addEventListener('input', handleInput);
   elements.urlTitle.addEventListener('input', handleInput);
   elements.refreshDevicesBtn.addEventListener('click', handleRefreshDevices);
+  elements.attachmentBtn.addEventListener('click', handleAttachmentClick);
+  elements.attachment.addEventListener('change', handleAttachmentChange);
+  elements.attachmentRemove.addEventListener('click', clearAttachment);
   elements.form.addEventListener('submit', handleSubmit);
 }
 
@@ -152,6 +171,55 @@ async function handleRefreshDevices() {
     btn.classList.remove('refreshing');
     btn.disabled = false;
   }
+}
+
+function handleAttachmentClick() {
+  elements.attachment.click();
+}
+
+async function handleAttachmentChange(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    showError('Only image files are supported.');
+    elements.attachment.value = '';
+    return;
+  }
+
+  try {
+    const buffer = await file.arrayBuffer();
+    attachmentData = {
+      buffer,
+      type: file.type,
+      name: file.name
+    };
+
+    elements.attachmentThumb.src = URL.createObjectURL(file);
+    elements.attachmentName.textContent = file.name;
+    elements.attachmentSize.textContent = formatFileSize(file.size);
+    elements.attachmentBtn.classList.add('hidden');
+    elements.attachmentPreview.classList.remove('hidden');
+    hideMessages();
+  } catch (error) {
+    logger.error('Failed to read attachment:', error);
+    showError('Failed to read attachment.');
+    clearAttachment();
+  }
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function clearAttachment() {
+  attachmentData = null;
+  elements.attachment.value = '';
+  elements.attachmentThumb.src = '';
+  elements.attachmentPreview.classList.add('hidden');
+  elements.attachmentBtn.classList.remove('hidden');
 }
 
 function handleInput() {
@@ -213,7 +281,9 @@ async function handleSubmit(e) {
       priority: parseInt(elements.priority.value, 10),
       url: elements.url.value.trim() || undefined,
       urlTitle: elements.urlTitle.value.trim() || undefined,
-      sound: elements.sound.value || undefined
+      sound: elements.sound.value || undefined,
+      attachmentBuffer: attachmentData?.buffer,
+      attachmentType: attachmentData?.type
     };
 
     // Delegate to service worker so send continues if popup closes
@@ -238,6 +308,7 @@ async function handleSubmit(e) {
     elements.url.value = '';
     elements.urlTitle.value = '';
     elements.messageCount.textContent = '0';
+    clearAttachment();
     handleInput(); // Re-validate form
   } catch (error) {
     showError(error.message || 'Failed to send message. Please try again.');

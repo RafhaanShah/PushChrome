@@ -135,7 +135,7 @@ export function $$(selector, parent = document) {
 }
 
 export function isPopupMode() {
-  return window.innerWidth < 800 && window.innerHeight < 600;
+  return window.innerWidth < 1000 && window.innerHeight < 1000;
 }
 
 export function getPopupUrl() {

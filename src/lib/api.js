@@ -257,23 +257,34 @@ export async function acknowledgeEmergency(secret, receiptId) {
 // Message API (for sending messages)
 // =============================================================================
 
-export async function sendMessage({ token, user, message, title, device, priority, url, urlTitle, sound }) {
-  const params = {
-    token,
-    user,
-    message,
-    title,
-    device,
-    priority,
-    url,
-    url_title: urlTitle,
-    sound
-  };
+export async function sendMessage({ token, user, message, title, device, priority, url, urlTitle, sound, attachmentBuffer, attachmentType }) {
+  const formData = new FormData();
+  formData.append('token', token);
+  formData.append('user', user);
+  formData.append('message', message);
+  if (title) formData.append('title', title);
+  if (device) formData.append('device', device);
+  if (priority !== undefined) formData.append('priority', String(priority));
+  if (url) formData.append('url', url);
+  if (urlTitle) formData.append('url_title', urlTitle);
+  if (sound) formData.append('sound', sound);
+  
+  if (attachmentBuffer && attachmentType) {
+    const blob = new Blob([attachmentBuffer], { type: attachmentType });
+    formData.append('attachment', blob, 'attachment');
+  }
 
-  const { data } = await apiRequest('/messages.json', {
+  const response = await fetch(`${API_BASE}/messages.json`, {
     method: 'POST',
-    body: encodeParams(params)
+    body: formData
   });
+
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new PushoverAPIError('Invalid response from server', response.status);
+  }
 
   if (data.status !== 1) {
     throw new PushoverAPIError(
