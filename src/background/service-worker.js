@@ -362,7 +362,7 @@ async function buildContextMenus() {
   if (settings.apiToken && settings.userKey) {
     chrome.contextMenus.create({
       id: 'refresh-devices',
-      title: 'Refresh Device List',
+      title: 'Refresh Devices',
       contexts: ['action']
     });
   }
@@ -393,9 +393,24 @@ async function buildContextMenus() {
     contexts: ['selection']
   });
   
+  // Parent menu for links
+  chrome.contextMenus.create({
+    id: 'send-link',
+    title: 'Send Link to Pushover',
+    contexts: ['link']
+  });
+  
+  // Parent menu for images
+  chrome.contextMenus.create({
+    id: 'send-image',
+    title: 'Send Image to Pushover',
+    contexts: ['image']
+  });
+  
   // Add device options under each parent
-  for (const parent of ['send-page', 'send-selection']) {
-    const contexts = parent === 'send-selection' ? ['selection'] : ['page'];
+  for (const parent of ['send-page', 'send-selection', 'send-link', 'send-image']) {
+    const contextsMap = { 'send-selection': ['selection'], 'send-link': ['link'], 'send-image': ['image'], 'send-page': ['page'] };
+    const contexts = contextsMap[parent];
     
     chrome.contextMenus.create({
       id: `${parent}-all`,
@@ -474,13 +489,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   
   const settings = await getSettings();
   
-  // Parse menu ID: "send-page-deviceName" or "send-selection-all"
-  const isPage = menuId.startsWith('send-page-');
-  const isSelection = menuId.startsWith('send-selection-');
+  // Parse menu ID: "send-{type}-{device}"
+  const match = String(menuId).match(/^send-(page|selection|link|image)-(.+)$/);
+  if (!match) return;
   
-  if (!isPage && !isSelection) return;
-  
-  const device = String(menuId).replace(/^send-(page|selection)-/, '');
+  const [, type, device] = match;
   
   const params = {
     token: settings.apiToken,
@@ -488,40 +501,35 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     device: device === 'all' ? undefined : device
   };
   
-  if (isPage) {
-    params.message = tab.title || info.pageUrl;
-    params.url = info.pageUrl;
-    params.urlTitle = info.pageUrl;
-  } else if (isSelection) {
-    params.message = info.selectionText;
+  switch (type) {
+    case 'page':
+      params.message = tab.title || info.pageUrl;
+      params.url = info.pageUrl;
+      params.urlTitle = info.pageUrl;
+      break;
+    case 'link':
+      params.message = info.selectionText || 'Link';
+      params.url = info.linkUrl;
+      params.urlTitle = info.linkUrl;
+      break;
+    case 'image':
+      params.message = 'Image';
+      params.url = info.srcUrl;
+      params.urlTitle = info.srcUrl;
+      try {
+        const response = await fetch(info.srcUrl);
+        if (response.ok) {
+          params.attachmentBuffer = await response.arrayBuffer();
+          params.attachmentType = response.headers.get('Content-Type') || 'image/png';
+        }
+      } catch { }
+      break;
+    case 'selection':
+      params.message = info.selectionText;
+      break;
   }
   
-  try {
-    await sendMessage(params);
-    
-    // Clear any previous send errors on success
-    await clearErrorState('send');
-    
-    showToastNotification('Message Sent', `Sent to ${device === 'all' ? 'all devices' : device}`);
-  } catch (error) {
-    logger.error('Context menu send failed:', error);
-    
-    // Handle auth/validation errors for send credentials
-    // Always show notification for send errors since they result from user action
-    if (error.errorType === ERROR_TYPES.VALIDATION || error.errorType === ERROR_TYPES.AUTH) {
-      await setErrorState({
-        type: 'send_auth',
-        message: 'Send credentials invalid. Check your API token and user key in Settings.',
-        recoverable: false
-      });
-      await updateBadge();
-      showCriticalErrorNotification('send_auth', 'Unable to send messages. Your API credentials are invalid. Please check Settings.');
-    } else if (error.errorType === ERROR_TYPES.RATE_LIMIT) {
-      showToastNotification('Rate Limited', 'Message limit reached. Try again later.');
-    } else {
-      showToastNotification('Send Failed', error.message || 'Failed to send message');
-    }
-  }
+  await handleSendMessage(params);
 });
 
 // =============================================================================
@@ -925,47 +933,55 @@ async function refreshDevices() {
 // =============================================================================
 
 async function handleSendMessage(params) {
+  const result = await trySendMessage(params);
+  await notifySendResult(result, params.device);
+  return result;
+}
+
+async function trySendMessage(params) {
   try {
     const result = await sendMessage(params);
-    
-    // Clear any previous send errors on success
     await clearErrorState('send');
-    
-    // Check if send page is still open
-    const sendPageOpen = await isSendPageOpen();
-    
-    if (!sendPageOpen) {
-      // Show toast notification for success
-      showToastNotification('Message Sent', `Sent to ${params.device || 'all devices'}`);
-    }
-    
     return { success: true, ...result };
   } catch (error) {
     logger.error('Send message failed:', error);
-    
-    // Handle auth/validation errors for send credentials
-    if (error.errorType === ERROR_TYPES.VALIDATION || error.errorType === ERROR_TYPES.AUTH) {
+    await handleSendError(error);
+    return { success: false, error: error.message, errorType: error.errorType };
+  }
+}
+
+async function handleSendError(error) {
+  switch (error.errorType) {
+    case ERROR_TYPES.VALIDATION:
+    case ERROR_TYPES.AUTH:
       await setErrorState({
         type: 'send_auth',
         message: 'Send credentials invalid. Check your API token and user key in Settings.',
         recoverable: false
       });
       await updateBadge();
-    } else if (error.errorType === ERROR_TYPES.RATE_LIMIT) {
-      // Rate limit is temporary - show notification but don't set persistent error
+      break;
+  }
+}
+
+async function notifySendResult(result, device) {
+  if (await isSendPageOpen()) return;
+  
+  if (result.success) {
+    showToastNotification('Message Sent', `Sent to ${device || 'all devices'}`);
+    return;
+  }
+  
+  switch (result.errorType) {
+    case ERROR_TYPES.VALIDATION:
+    case ERROR_TYPES.AUTH:
+      showCriticalErrorNotification('send_auth', 'Unable to send messages. Your API credentials are invalid. Please check Settings.');
+      break;
+    case ERROR_TYPES.RATE_LIMIT:
       showToastNotification('Rate Limited', 'Message limit reached. Try again later.');
-      return { success: false, error: error.message, errorType: error.errorType };
-    }
-    
-    // Check if send page is still open
-    const sendPageOpen = await isSendPageOpen();
-    
-    if (!sendPageOpen) {
-      // Show toast notification for error
-      showToastNotification('Send Failed', error.message || 'Failed to send message');
-    }
-    
-    return { success: false, error: error.message, errorType: error.errorType };
+      break;
+    default:
+      showToastNotification('Send Failed', result.error || 'Failed to send message');
   }
 }
 
