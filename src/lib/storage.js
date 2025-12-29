@@ -8,7 +8,8 @@ const STORAGE_KEYS = {
   PENDING_LOGIN: 'pendingLogin',
   DEVICES: 'devices',
   SEND_PREFERENCES: 'sendPreferences',
-  ERROR_STATE: 'errorState'
+  ERROR_STATE: 'errorState',
+  SCROLL_POSITION: 'scrollPosition'
 };
 
 const DEFAULT_SETTINGS = {
@@ -268,6 +269,28 @@ export async function clearErrorState(prefix = null) {
   } else {
     await chrome.storage.local.remove(STORAGE_KEYS.ERROR_STATE);
   }
+}
+
+// =============================================================================
+// Scroll Position (chrome.storage.local - remembers scroll position)
+// =============================================================================
+
+export async function getScrollPosition(maxAgeSeconds = 600) {
+  const result = await chrome.storage.local.get(STORAGE_KEYS.SCROLL_POSITION);
+  const data = result[STORAGE_KEYS.SCROLL_POSITION];
+  
+  if (!data || typeof data.position !== 'number') return 0;
+  
+  const ageSeconds = (Date.now() - (data.timestamp || 0)) / 1000;
+  if (ageSeconds > maxAgeSeconds) return 0;
+  
+  return data.position;
+}
+
+export async function saveScrollPosition(position) {
+  await chrome.storage.local.set({ 
+    [STORAGE_KEYS.SCROLL_POSITION]: { position, timestamp: Date.now() } 
+  });
 }
 
 // =============================================================================

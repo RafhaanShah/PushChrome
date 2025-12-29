@@ -78,6 +78,8 @@ async function init() {
   await loadDevices();
   await loadSendPreferences();
   bindEvents();
+  
+  elements.message.focus();
 }
 
 async function loadSettings() {
@@ -301,6 +303,7 @@ async function handleSubmit(e) {
     elements.messageCount.textContent = '0';
     clearAttachment();
     handleInput(); // Re-validate form
+    elements.message.focus();
   } catch (error) {
     showError(error.message || 'Failed to send message. Please try again.');
   } finally {

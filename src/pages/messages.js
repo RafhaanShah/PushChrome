@@ -2,7 +2,7 @@
 
 import * as storage from '../lib/storage.js';
 import * as api from '../lib/api.js';
-import { $, escapeHtml, formatRelativeTime, getPriorityClass, getPriorityLabel, linkifyText } from '../lib/utils.js';
+import { $, debounce, escapeHtml, formatRelativeTime, getPriorityClass, getPriorityLabel, linkifyText } from '../lib/utils.js';
 import { logger } from '../lib/logger.js';
 import { Page, navigateTo, initWindowMode } from '../lib/navigation.js';
 import { initHeader, ICONS } from '../lib/header.js';
@@ -10,6 +10,7 @@ import { initHeader, ICONS } from '../lib/header.js';
 let isRefreshing = false;
 let settings = null;
 let headerController = null;
+let hadUnreadOnOpen = false;
 
 async function init() {
   initWindowMode();
@@ -36,14 +37,34 @@ function setupEventListeners() {
   // Error banner actions
   $('#error-banner-action')?.addEventListener('click', handleErrorAction);
   $('#error-banner-dismiss')?.addEventListener('click', dismissErrorBanner);
+  
+  // Save scroll position on page unload/visibility change
+  const messageList = $('#message-list');
+  if (messageList) {
+    messageList.addEventListener('scroll', debounce(() => {
+      storage.saveScrollPosition(messageList.scrollTop);
+    }, 100));
+  }
+  
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && messageList) {
+      storage.saveScrollPosition(messageList.scrollTop);
+    }
+  });
+  
+  window.addEventListener('beforeunload', () => {
+    if (messageList) {
+      storage.saveScrollPosition(messageList.scrollTop);
+    }
+  });
 }
 
 function setupMessageListener() {
   // Listen for updates from service worker when new messages arrive
   chrome.runtime.onMessage.addListener((request) => {
     if (request.action === 'messagesUpdated') {
-      // Reload and display messages
-      loadAndDisplayMessages().then(() => {
+      // Reload and display messages, preserving scroll position
+      loadAndDisplayMessages(true).then(() => {
         updateMarkReadButton();
       });
     }
@@ -63,7 +84,21 @@ async function checkAuthAndLoadMessages() {
   }
 
   settings = await storage.getSettings();
+  
+  // Check if there are unread messages before loading
+  const unreadCount = await storage.getUnreadCount();
+  hadUnreadOnOpen = unreadCount > 0;
+  
   await loadAndDisplayMessages();
+  
+  // Restore scroll position only if no unread messages
+  if (!hadUnreadOnOpen) {
+    const savedPosition = await storage.getScrollPosition();
+    if (savedPosition > 0) {
+      const messageList = $('#message-list');
+      messageList.scrollTop = savedPosition;
+    }
+  }
   
   // Show/hide mark as read button based on setting
   updateMarkReadButton();
@@ -100,7 +135,7 @@ function showMessages() {
   $('#messages-container').classList.remove('hidden');
 }
 
-async function loadAndDisplayMessages() {
+async function loadAndDisplayMessages(preserveScroll = false) {
   const messages = await storage.getVisibleMessages();
 
   if (messages.length === 0) {
@@ -114,16 +149,25 @@ async function loadAndDisplayMessages() {
   $('#message-list').classList.remove('hidden');
   $('#empty-messages').classList.add('hidden');
 
-  renderMessageList(messages);
+  renderMessageList(messages, preserveScroll);
 }
 
-function renderMessageList(messages) {
+function renderMessageList(messages, preserveScroll = false) {
   const container = $('#message-list');
+  const previousScrollTop = container.scrollTop;
+  const previousScrollHeight = container.scrollHeight;
+  
   container.innerHTML = '';
 
   for (const msg of messages) {
     const messageEl = createMessageElement(msg, !msg._seen);
     container.appendChild(messageEl);
+  }
+  
+  if (preserveScroll && previousScrollTop > 0) {
+    const newScrollHeight = container.scrollHeight;
+    const heightDiff = newScrollHeight - previousScrollHeight;
+    container.scrollTop = previousScrollTop + heightDiff;
   }
 }
 
