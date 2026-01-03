@@ -326,3 +326,17 @@
 .message-list::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
+
+/* Load More Indicator */
+.load-more-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+
+.spinner-small {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}

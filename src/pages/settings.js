@@ -49,6 +49,7 @@ async function init() {
   elements.refreshInterval = $('#refresh-interval');
   elements.deviceRefreshInterval = $('#device-refresh-interval');
   elements.maxMessages = $('#max-messages');
+  elements.maxMessagesValue = $('#max-messages-value');
   elements.notificationsEnabled = $('#notifications-enabled');
   elements.badgeEnabled = $('#badge-enabled');
   elements.markAsReadOnOpen = $('#mark-as-read-on-open');
@@ -87,6 +88,7 @@ async function loadSettings() {
   elements.refreshInterval.value = String(settings.refreshInterval);
   elements.deviceRefreshInterval.value = String(settings.deviceRefreshInterval);
   elements.maxMessages.value = String(settings.maxMessages);
+  elements.maxMessagesValue.textContent = settings.maxMessages;
   elements.notificationsEnabled.checked = settings.notificationsEnabled;
   elements.badgeEnabled.checked = settings.badgeEnabled;
   elements.markAsReadOnOpen.checked = settings.markAsReadOnOpen;
@@ -98,6 +100,9 @@ function bindEvents() {
   elements.loginBtn.addEventListener('click', () => navigateTo(Page.LOGIN));
   elements.validateBtn.addEventListener('click', handleValidate);
   elements.saveBtn.addEventListener('click', handleSave);
+  elements.maxMessages.addEventListener('input', () => {
+    elements.maxMessagesValue.textContent = elements.maxMessages.value;
+  });
 }
 
 async function handleLogout() {

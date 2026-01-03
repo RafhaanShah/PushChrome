@@ -11,6 +11,11 @@ let settings = null;
 let headerController = null;
 let hadUnreadOnOpen = false;
 
+const PAGE_SIZE = 50;
+let loadedMessagesCount = 0;
+let hasMoreMessages = true;
+let isLoadingMore = false;
+
 async function init() {
   console.info('Messages page initialized');
   await initWindowMode(Page.MESSAGES);
@@ -41,6 +46,7 @@ function setupEventListeners() {
   // Save scroll position on page unload/visibility change
   window.addEventListener('scroll', debounce(() => {
     storage.saveScrollPosition(window.scrollY);
+    checkInfiniteScroll();
   }, 100));
 
   document.addEventListener('visibilitychange', () => {
@@ -94,6 +100,7 @@ async function checkAuthAndLoadMessages() {
     if (savedPosition > 0) {
       requestAnimationFrame(() => {
         window.scrollTo(0, savedPosition);
+        setTimeout(checkInfiniteScroll, 100);
       });
     }
   }
@@ -134,9 +141,12 @@ function showMessages() {
 }
 
 async function loadAndDisplayMessages(preserveScroll = false) {
-  const messages = await storage.getVisibleMessages();
+  loadedMessagesCount = 0;
+  hasMoreMessages = true;
 
-  if (messages.length === 0) {
+  const totalCount = await storage.getVisibleMessagesCount();
+
+  if (totalCount === 0) {
     showMessages();
     $('#message-list').classList.add('hidden');
     $('#empty-messages').classList.remove('hidden');
@@ -147,25 +157,76 @@ async function loadAndDisplayMessages(preserveScroll = false) {
   $('#message-list').classList.remove('hidden');
   $('#empty-messages').classList.add('hidden');
 
-  renderMessageList(messages, preserveScroll);
-}
-
-function renderMessageList(messages, preserveScroll = false) {
   const container = $('#message-list');
-  const previousScrollTop = container.scrollTop;
-  const previousScrollHeight = container.scrollHeight;
-
   container.innerHTML = '';
 
-  for (const msg of messages) {
-    const messageEl = createMessageElement(msg, !msg._seen);
-    container.appendChild(messageEl);
+  const existingIndicator = $('#load-more-indicator');
+  if (existingIndicator) existingIndicator.remove();
+
+  let initialLoadCount = PAGE_SIZE;
+
+  if (!hadUnreadOnOpen) {
+    const savedPosition = await storage.getScrollPosition();
+    if (savedPosition > 0) {
+      const estimatedRowHeight = 120;
+      const estimatedMessagesNeeded = Math.ceil(savedPosition / estimatedRowHeight) + 10;
+      initialLoadCount = Math.max(PAGE_SIZE, Math.ceil(estimatedMessagesNeeded / PAGE_SIZE) * PAGE_SIZE);
+    }
   }
 
-  if (preserveScroll && previousScrollTop > 0) {
-    const newScrollHeight = container.scrollHeight;
-    const heightDiff = newScrollHeight - previousScrollHeight;
-    container.scrollTop = previousScrollTop + heightDiff;
+  await loadMoreMessages(initialLoadCount, !preserveScroll);
+}
+
+async function loadMoreMessages(count = PAGE_SIZE, isInitialLoad = false) {
+  if (isLoadingMore || !hasMoreMessages) return;
+
+  isLoadingMore = true;
+
+  try {
+    const result = await storage.getVisibleMessagesPaginated(count, loadedMessagesCount);
+
+    if (result.messages.length === 0) {
+      hasMoreMessages = false;
+      return;
+    }
+
+    const container = $('#message-list');
+    for (const msg of result.messages) {
+      const messageEl = createMessageElement(msg, !msg._seen);
+      container.appendChild(messageEl);
+    }
+
+    loadedMessagesCount += result.messages.length;
+    hasMoreMessages = result.hasMore;
+
+    updateLoadingIndicator();
+  } finally {
+    isLoadingMore = false;
+  }
+}
+
+function checkInfiniteScroll() {
+  if (isLoadingMore || !hasMoreMessages) return;
+
+  const scrollY = window.scrollY;
+  const windowHeight = window.innerHeight;
+  const documentHeight = document.documentElement.scrollHeight;
+
+  if (scrollY + windowHeight >= documentHeight - 300) {
+    loadMoreMessages();
+  }
+}
+
+function updateLoadingIndicator() {
+  let indicator = $('#load-more-indicator');
+  if (!hasMoreMessages && indicator) {
+    indicator.remove();
+  } else if (hasMoreMessages && !indicator) {
+    indicator = document.createElement('div');
+    indicator.id = 'load-more-indicator';
+    indicator.className = 'load-more-indicator';
+    indicator.innerHTML = '<div class="spinner spinner-small"></div>';
+    $('#message-list').after(indicator);
   }
 }
 
@@ -253,11 +314,16 @@ async function deleteMessage(messageId, element) {
   await storage.softDeleteMessage(messageId);
 
   element.remove();
+  loadedMessagesCount--;
 
-  const visible = await storage.getVisibleMessages();
-  if (visible.length === 0) {
+  const totalCount = await storage.getVisibleMessagesCount();
+  if (totalCount === 0) {
     $('#message-list').classList.add('hidden');
     $('#empty-messages').classList.remove('hidden');
+  } else {
+    hasMoreMessages = loadedMessagesCount < totalCount;
+    updateLoadingIndicator();
+    checkInfiniteScroll();
   }
 }
 

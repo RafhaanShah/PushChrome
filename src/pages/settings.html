@@ -108,14 +108,8 @@
           </div>
 
           <div class="form-group">
-            <label for="max-messages">Max Messages to Store</label>
-            <select id="max-messages">
-              <option value="0">None (clear when read)</option>
-              <option value="10">10 messages</option>
-              <option value="25">25 messages</option>
-              <option value="50">50 messages</option>
-              <option value="100">100 messages</option>
-            </select>
+            <label for="max-messages">Max Messages to Store: <span id="max-messages-value">100</span></label>
+            <input type="range" id="max-messages" min="0" max="1000" step="10" value="100">
           </div>
 
           <div class="form-group toggle-group">
