@@ -12,6 +12,7 @@ let headerController = null;
 let hadUnreadOnOpen = false;
 
 async function init() {
+  console.info('Messages page initialized');
   await initWindowMode(Page.MESSAGES);
 
   headerController = initHeader({
@@ -57,6 +58,7 @@ function setupMessageListener() {
   // Listen for updates from service worker when new messages arrive
   chrome.runtime.onMessage.addListener((request) => {
     if (request.action === 'messagesUpdated') {
+      console.debug('Received messagesUpdated event');
       // Reload and display messages, preserving scroll position
       loadAndDisplayMessages(true).then(() => {
         updateMarkReadButton();
@@ -64,6 +66,7 @@ function setupMessageListener() {
     }
 
     if (request.action === 'errorStateChanged') {
+      console.debug('Received errorStateChanged event');
       checkErrorState();
     }
   });
@@ -229,6 +232,7 @@ function createMessageElement(msg, isUnread) {
 }
 
 async function copyMessage(msg, button) {
+  console.debug('Copy message clicked', { messageId: msg.id });
   try {
     await navigator.clipboard.writeText(msg.message);
     const originalText = button.textContent;
@@ -243,6 +247,7 @@ async function copyMessage(msg, button) {
 }
 
 async function deleteMessage(messageId, element) {
+  console.debug('Delete message clicked', { messageId });
   element.style.opacity = '0.5';
 
   await storage.softDeleteMessage(messageId);
@@ -257,6 +262,7 @@ async function deleteMessage(messageId, element) {
 }
 
 async function acknowledgeMessage(receipt, messageId, button) {
+  console.debug('Acknowledge clicked', { messageId });
   button.disabled = true;
   button.textContent = 'Acknowledging...';
 
@@ -283,6 +289,7 @@ async function acknowledgeMessage(receipt, messageId, button) {
 async function refreshMessages(checkDebounce = false) {
   if (isRefreshing) return;
 
+  console.debug('Refresh button clicked');
   isRefreshing = true;
   setRefreshingState(true);
 
@@ -363,6 +370,7 @@ async function markMessagesAsRead() {
 }
 
 async function handleMarkAllRead() {
+  console.debug('Mark all read clicked');
   await markMessagesAsRead();
   await updateBadge();
 }
@@ -443,6 +451,7 @@ async function checkErrorState() {
 }
 
 async function handleErrorAction() {
+  console.debug('Error banner action clicked');
   if (!currentErrorState) return;
 
   if (currentErrorState.type === 'receive_auth' || currentErrorState.type === 'receive_device') {
@@ -456,6 +465,7 @@ async function handleErrorAction() {
 }
 
 async function dismissErrorBanner() {
+  console.debug('Error banner dismissed');
   // Just hide the banner but keep the error state (user acknowledged it)
   $('#error-banner').classList.add('hidden');
 }

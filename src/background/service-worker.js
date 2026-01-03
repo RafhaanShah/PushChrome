@@ -18,7 +18,7 @@ import {
   markAllRead
 } from '../lib/storage.js';
 import { acknowledgeEmergency, fetchMessages, deleteMessages, sendMessage, createWebSocketConnection, validateCredentials, ERROR_TYPES } from '../lib/api.js';
-import { Page, openPageInWindow, openUrlInTab, createOffscreenDocument, closeOffscreenDocument } from '../lib/navigation.js';
+import { Page, openPageInWindow, openUrlInTab, createOffscreenDocument, closeOffscreenDocument, isPageOpen } from '../lib/navigation.js';
 
 const MESSAGE_REFRESH_ALARM_NAME = 'refreshMessages';
 const DEVICE_REFRESH_ALARM_NAME = 'refreshDevices';
@@ -86,7 +86,7 @@ async function cleanupIconCache() {
     }
 
     if (cleaned > 0) {
-      console.info(`Cleaned ${cleaned} expired icons from cache`);
+      console.debug(`Cleaned ${cleaned} expired icons from cache`);
     }
     return cleaned;
   } catch (error) {
@@ -100,7 +100,7 @@ async function cleanupIconCache() {
 // =============================================================================
 
 chrome.runtime.onInstalled.addListener(async (details) => {
-  console.info('Extension installed/updated:', details.reason);
+  console.info('Browser extension installed/updated:', details.reason);
   if (details.reason === 'install') {
     openPageInWindow(Page.ROOT);
   }
@@ -118,10 +118,8 @@ chrome.runtime.onStartup.addListener(async () => {
   await setupAlarms();
   await purgeDeletedMessages();
   await updateBadge();
-
   await refreshMessages();
   await refreshDevices();
-
   await connectWebSocket();
 });
 
@@ -224,7 +222,7 @@ async function connectWebSocket() {
     },
 
     onMessage: async () => {
-      console.debug('WebSocket: New message notification received');
+      console.info('WebSocket: New message notification received');
       await refreshMessages();
     },
 
@@ -276,6 +274,7 @@ async function connectWebSocket() {
 }
 
 async function disconnectWebSocket() {
+  console.debug('Disconnecting WebSocket...');
   if (websocketReconnectTimeout) {
     clearTimeout(websocketReconnectTimeout);
     websocketReconnectTimeout = null;
@@ -448,6 +447,7 @@ async function buildContextMenus() {
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const menuId = info.menuItemId;
+  console.info('Context menu item clicked:', menuId);
 
   // Handle browser action context menu items
   if (menuId === 'refresh-messages') {
@@ -496,7 +496,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
   // Parse menu ID: "send-{type}-{device}"
   const match = String(menuId).match(/^send-(page|selection|link|image)-(.+)$/);
-  if (!match) return;
+  if (!match) {
+    console.warn('Unknown context menu item clicked:', menuId);
+    return;
+  }
 
   const [, type, device] = match;
 
@@ -534,6 +537,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       break;
   }
 
+  console.debug(`Sending message from context menu (type: ${type}, device: ${device})`);
   await handleSendMessage(params);
 });
 
@@ -561,6 +565,7 @@ async function refreshMessages(options = {}) {
   }
 
   try {
+    console.info('Refreshing messages from server...');
     const messages = await fetchMessages(session.secret, session.deviceId);
     lastRefreshTime = Date.now();
 
@@ -575,7 +580,7 @@ async function refreshMessages(options = {}) {
       const highestId = Math.max(...messages.map(m => m.id));
       await deleteMessages(session.secret, session.deviceId, highestId);
 
-      console.debug(`Fetched ${messages.length} messages, ${newCount} new`);
+      console.info(`Fetched ${messages.length} messages, ${newCount} new`);
 
       // Show notifications for new messages
       if (newCount > 0 && !skipNotifications) {
@@ -633,8 +638,6 @@ async function refreshMessages(options = {}) {
     return { error: error.message, errorType: error.errorType };
   }
 }
-
-
 
 function notifyPopupOfNewMessages() {
   // Send message to any open messages page to refresh
@@ -736,6 +739,7 @@ async function showNotification(message) {
   }
 
   try {
+    console.debug('Showing notification for message ID:', message.id);
     await chrome.notifications.create(notificationId, options);
   } catch (error) {
     // Fallback without custom icon if it fails
@@ -756,6 +760,7 @@ function getPriorityForNotification(pushoverPriority) {
 // Handle notification clicks - always open the messages page
 chrome.notifications.onClicked.addListener(async (notificationId) => {
   if (notificationId.startsWith('pushover-msg-')) {
+    console.debug('Notification clicked:', notificationId);
     openPageInWindow(Page.MESSAGES);
     await markMessageAsReadFromNotification(notificationId);
     chrome.notifications.clear(notificationId);
@@ -765,6 +770,7 @@ chrome.notifications.onClicked.addListener(async (notificationId) => {
 // Handle notification dismissal (user closes from OS tray)
 chrome.notifications.onClosed.addListener(async (notificationId, byUser) => {
   if (notificationId.startsWith('pushover-msg-') && byUser) {
+    console.debug('Notification dismissed by user:', notificationId);
     await markMessageAsReadFromNotification(notificationId);
   }
 });
@@ -833,6 +839,7 @@ async function handleAcknowledgeEmergency(receipt, messageId) {
   }
 
   try {
+    console.info('Acknowledging emergency with receipt:', receipt);
     await acknowledgeEmergency(session.secret, receipt);
 
     // Update message in storage to mark as acknowledged
@@ -870,6 +877,7 @@ async function handleCopyToClipboard(text) {
 // =============================================================================
 
 chrome.storage.onChanged.addListener(async (changes, area) => {
+  console.debug('Storage change detected:', changes, 'Area:', area);
   // Update badge when messages change
   if (area === 'local' && changes.messages) {
     await updateBadge();
@@ -918,6 +926,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 // =============================================================================
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.debug('Received runtime message:', request, 'from', sender);
   if (request.action === 'refreshMessages') {
     const options = {
       skipNotifications: request.skipNotifications || false,
@@ -995,7 +1004,9 @@ async function refreshDevices() {
       return { success: false, error: 'Send credentials not configured' };
     }
 
+    console.info('Refreshing devices from server...');
     const result = await validateCredentials(settings.apiToken, settings.userKey);
+    console.info(`Device refresh result: valid=${result.valid}, devices=${result.devices.length}`);
 
     if (!result.valid) {
       return { success: false, error: 'Invalid credentials' };
@@ -1046,7 +1057,7 @@ async function handleSendError(error) {
 }
 
 async function notifySendResult(result, device) {
-  if (await isSendPageOpen()) return;
+  if (await isPageOpen(Page.SEND)) return;
 
   if (result.success) {
     showToastNotification('Message Sent', `Sent to ${device || 'all devices'}`);
@@ -1063,17 +1074,6 @@ async function notifySendResult(result, device) {
       break;
     default:
       showToastNotification('Send Failed', result.error || 'Failed to send message');
-  }
-}
-
-async function isSendPageOpen() {
-  try {
-    const views = await chrome.runtime.getContexts({
-      contextTypes: ['TAB', 'POPUP']
-    });
-    return views.some(v => v.documentUrl?.includes('send.html'));
-  } catch {
-    return false;
   }
 }
 

@@ -21,6 +21,7 @@ const elements = {
 let pendingLoginResult = null;
 
 async function init() {
+  console.info('Login page initialized');
   await initWindowMode(Page.LOGIN, true);
   elements.form = $('#login-form');
   elements.credentialsSection = $('#credentials-section');
@@ -71,6 +72,7 @@ async function handleSubmit(e) {
   hideError();
 
   const isInDeviceMode = !elements.deviceSection.classList.contains('hidden');
+  console.debug('Form submitted', { mode: isInDeviceMode ? 'device' : 'login' });
 
   if (isInDeviceMode) {
     await handleDeviceSubmit();
@@ -165,6 +167,7 @@ async function handleDeviceSubmit() {
 }
 
 function showDeviceSection(loginResult) {
+  console.debug('Transitioning to device section');
   pendingLoginResult = loginResult;
   elements.credentialsSection.classList.add('hidden');
   elements.deviceSection.classList.remove('hidden');
@@ -174,6 +177,7 @@ function showDeviceSection(loginResult) {
 }
 
 async function handleDeviceBack() {
+  console.debug('Back button clicked');
   await clearPendingLogin();
   pendingLoginResult = null;
   elements.deviceSection.classList.add('hidden');

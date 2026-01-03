@@ -126,16 +126,16 @@ export function linkifyText(text) {
 // DOM Helpers
 // =============================================================================
 
-export function $(selector, parent = document) {
-  return parent.querySelector(selector);
-}
-
 export function debounce(fn, delay) {
   let timeoutId;
   return (...args) => {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => fn(...args), delay);
   };
+}
+
+export function $(selector, parent = document) {
+  return parent.querySelector(selector);
 }
 
 export function $$(selector, parent = document) {

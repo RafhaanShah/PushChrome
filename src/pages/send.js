@@ -46,6 +46,7 @@ let attachmentData = null; // { buffer: ArrayBuffer, type: string, name: string 
 let settings = null;
 
 async function init() {
+  console.info('Send page initialized');
   await initWindowMode(Page.SEND);
   initHeader({
     title: 'Send Message',
@@ -134,6 +135,7 @@ function bindEvents() {
 }
 
 function handlePriorityChange() {
+  console.debug('Priority changed', { priority: elements.priority.value });
   const isEmergency = elements.priority.value === '2';
   elements.emergencyOptions.classList.toggle('hidden', !isEmergency);
 }
@@ -143,6 +145,7 @@ async function handleRefreshDevices() {
 
   if (btn.classList.contains('refreshing')) return;
 
+  console.debug('Refresh devices clicked');
   btn.classList.add('refreshing');
   btn.disabled = true;
 
@@ -180,6 +183,8 @@ async function handleAttachmentChange(e) {
   const file = e.target.files?.[0];
   if (!file) return;
 
+  console.debug('Attachment selected', { name: file.name, type: file.type, size: file.size });
+
   if (!file.type.startsWith('image/')) {
     showError('Only image files are supported.');
     elements.attachment.value = '';
@@ -214,6 +219,7 @@ function formatFileSize(bytes) {
 }
 
 function clearAttachment() {
+  console.debug('Attachment cleared');
   attachmentData = null;
   elements.attachment.value = '';
   elements.attachmentThumb.src = '';
@@ -254,6 +260,7 @@ function validateForm() {
 
 async function handleSubmit(e) {
   e.preventDefault();
+  console.debug('Send button clicked');
 
   const message = elements.message.value.trim();
 

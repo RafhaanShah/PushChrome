@@ -29,6 +29,7 @@ const elements = {
 };
 
 async function init() {
+  console.info('Settings page initialized');
   await initWindowMode(Page.SETTINGS);
   initHeader({
     title: 'Settings',
@@ -100,6 +101,7 @@ function bindEvents() {
 }
 
 async function handleLogout() {
+  console.debug('Logout clicked');
   if (!confirm('Are you sure you want to logout? Your cached messages will be deleted.')) {
     return;
   }
@@ -109,6 +111,7 @@ async function handleLogout() {
 }
 
 async function handleValidate() {
+  console.debug('Validate clicked');
   const token = elements.apiToken.value.trim();
   const user = elements.userKey.value.trim();
 
@@ -155,6 +158,7 @@ async function handleValidate() {
 }
 
 async function handleSave() {
+  console.debug('Save clicked');
   setLoading(elements.saveBtn, true);
 
   try {

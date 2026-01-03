@@ -382,8 +382,7 @@ export function createWebSocketConnection(deviceId, secret, handlers = {}) {
   };
 
   ws.onerror = (error) => {
-    console.error('WebSocket error:', error);
-    onError?.('connection', 'WebSocket connection error');
+    onError?.('connection', 'WebSocket connection error: ' + error);
   };
 
   ws.onclose = (event) => {

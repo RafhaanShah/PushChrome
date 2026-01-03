@@ -6,6 +6,7 @@ const Page = {
     MESSAGES: 'messages',
     SEND: 'send',
     SETTINGS: 'settings',
+    OFFSCREEN: 'settings',
 };
 
 const PAGE_PATHS = {
@@ -14,10 +15,11 @@ const PAGE_PATHS = {
     [Page.MESSAGES]: 'messages.html',
     [Page.SEND]: 'send.html',
     [Page.SETTINGS]: 'settings.html',
+    [Page.OFFSCREEN]: 'offscreen.html',
 };
 
 function navigateTo(page, options = {}) {
-    console.info('Navigating to page:', page);
+    console.debug('Navigating to page:', page);
     const { replace = false } = options;
     const path = PAGE_PATHS[page];
 
@@ -33,16 +35,19 @@ function isPopupMode() {
 }
 
 function openPageInWindow(page) {
+    console.debug('Opening page in window:', page);
     const url = chrome.runtime.getURL(`src/pages/${PAGE_PATHS[page]}`);
     openUrlInWindow(url);
 }
 
 function openUrlInWindow(url) {
+    console.debug('Opening URL in window:', url);
     console.info('Opening URL in window:', url);
     chrome.windows.create({ url, type: 'popup' });
 }
 
 function openUrlInTab(url) {
+    console.debug('Opening URL in tab:', url);
     console.info('Opening URL in tab:', url);
     chrome.tabs.create({ url });
 }
@@ -65,9 +70,9 @@ async function createOffscreenDocument() {
         return;
     }
 
-    console.info('Creating offscreen document');
+    console.debug('Creating offscreen document');
     await chrome.offscreen.createDocument({
-        url: chrome.runtime.getURL('src/pages/offscreen.html'),
+        url: chrome.runtime.getURL(`src/pages/${PAGE_PATHS[Page.OFFSCREEN]}`),
         reasons: ['CLIPBOARD'],
         justification: 'Copy notification message to clipboard'
     });
@@ -97,6 +102,17 @@ async function closeOffscreenDocument() {
     await chrome.offscreen.closeDocument();
 }
 
+async function isPageOpen(page) {
+    try {
+        const views = await chrome.runtime.getContexts({
+            contextTypes: ['TAB', 'POPUP']
+        });
+        return views.some(v => v.documentUrl?.includes(PAGE_PATHS[page]));
+    } catch {
+        return false;
+    }
+}
+
 export {
     Page,
     navigateTo,
@@ -107,4 +123,5 @@ export {
     initWindowMode,
     createOffscreenDocument,
     closeOffscreenDocument,
+    isPageOpen,
 };
