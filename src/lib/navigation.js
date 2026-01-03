@@ -6,7 +6,7 @@ const Page = {
     MESSAGES: 'messages',
     SEND: 'send',
     SETTINGS: 'settings',
-    OFFSCREEN: 'settings',
+    OFFSCREEN: 'offscreen',
 };
 
 const PAGE_PATHS = {

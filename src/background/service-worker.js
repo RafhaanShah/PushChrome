@@ -308,8 +308,6 @@ async function ensureWebSocketConnected() {
     return; // WebSocket mode not enabled
   }
 
-  console.debug('Checking WebSocket status:', websocket ? websocket.readyState : 'not connected');
-
   // If WebSocket is not connected, reconnect
   if (!websocket || (websocket.readyState !== WebSocket.OPEN && websocket.readyState !== WebSocket.CONNECTING)) {
     console.debug('WebSocket not connected, reconnecting...');
@@ -877,14 +875,15 @@ async function handleCopyToClipboard(text) {
 // =============================================================================
 
 chrome.storage.onChanged.addListener(async (changes, area) => {
-  console.debug('Storage change detected:', changes, 'Area:', area);
   // Update badge when messages change
   if (area === 'local' && changes.messages) {
+    console.debug('Storage change detected: messages');
     await updateBadge();
   }
 
   // Update badge when error state changes
   if (area === 'local' && changes.errorState) {
+    console.debug('Storage change detected: error state');
     await updateBadge();
     // Notify popup/pages of error state change
     chrome.runtime.sendMessage({ action: 'errorStateChanged' }).catch(() => { });
@@ -892,7 +891,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 
   // Reconfigure alarms and WebSocket when settings change
   if (area === 'local' && changes.settings) {
-    const newSettings = changes.settings.newValue;
+    console.debug('Storage change detected: settings');
     await setupAlarms();
     // Connect or disconnect WebSocket based on new refresh interval setting
     await connectWebSocket();
@@ -902,6 +901,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 
   // Set up alarms and WebSocket when user logs in/out
   if (area === 'local' && changes.session) {
+    console.debug('Storage change detected: session');
     await setupAlarms();
     if (changes.session.newValue?.deviceId) {
       // User just logged in, clear any previous errors and connect WebSocket
@@ -917,6 +917,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 
   // Rebuild context menus when devices change
   if (area === 'local' && changes.devices) {
+    console.debug('Storage change detected: devices');
     await buildContextMenus();
   }
 });
@@ -926,7 +927,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 // =============================================================================
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.debug('Received runtime message:', request, 'from', sender);
+  console.debug('Received runtime message:', request.action);
   if (request.action === 'refreshMessages') {
     const options = {
       skipNotifications: request.skipNotifications || false,

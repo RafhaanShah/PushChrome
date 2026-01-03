@@ -29,7 +29,7 @@ function initHeader(options) {
   const header = $('.header');
   if (!header) return null;
 
-  console.info('Header initialized', { page: currentPage });
+  console.info('Header initialized', currentPage);
 
   // Clear existing content
   header.innerHTML = '';
