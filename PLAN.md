@@ -154,7 +154,7 @@ The Pushover Open Client API requires a multi-step authentication process:
    // - saveSession(session)
    // - clearSession()
    
-   // Settings storage (chrome.storage.sync)
+   // Settings storage (chrome.storage.local)
    // - getSettings() → { apiToken, userKey, refreshInterval }
    // - saveSettings(settings)
    
@@ -268,7 +268,7 @@ The Pushover Open Client API requires a multi-step authentication process:
 
 2. **Create `src/pages/settings.js`**
    - Load session info from storage
-   - Load/save settings to `chrome.storage.sync`
+   - Load/save settings to `chrome.storage.local`
    - Handle logout (clear session, redirect to login)
    - Validate send credentials via `/1/users/validate.json`
    - Update alarm interval on save
@@ -287,7 +287,7 @@ The Pushover Open Client API requires a multi-step authentication process:
      "lastReadId": "380698969174458372"
    }
    
-   // chrome.storage.sync (preferences - synced across devices)
+   // chrome.storage.local (preferences - synced across devices)
    {
      "settings": {
        "apiToken": "azGDORePK8gMaC0QOYAMyEEuzJnyUi",
@@ -495,7 +495,7 @@ The Pushover Open Client API requires a multi-step authentication process:
 
 | API | Permission | Purpose |
 |-----|------------|---------|
-| `chrome.storage.sync` | `storage` | Sync settings across devices |
+| `chrome.storage.local` | `storage` | Sync settings across devices |
 | `chrome.storage.local` | `storage` | Store session + message cache |
 | `chrome.alarms` | `alarms` | Schedule background refresh |
 | `chrome.notifications` | `notifications` | Show desktop notifications |
@@ -825,7 +825,7 @@ Server Messages:
 - Detect system preference via `prefers-color-scheme`
 - Add toggle in settings to override (System / Light / Dark)
 - CSS custom properties for theme colors
-- Persist preference in `chrome.storage.sync`
+- Persist preference in `chrome.storage.local`
 
 ### Operating Modes (Future)
 The extension should support flexible operating modes based on which credentials are configured:

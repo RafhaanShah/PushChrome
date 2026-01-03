@@ -8,7 +8,9 @@
     "storage",
     "alarms",
     "notifications",
-    "contextMenus"
+    "contextMenus",
+    "offscreen",
+    "clipboardWrite"
   ],
 
   "host_permissions": [
@@ -27,6 +29,11 @@
       "48": "src/icons/icon-48.png",
       "128": "src/icons/icon-128.png"
     }
+  },
+
+  "options_ui": {
+    "page": "src/pages/settings.html",
+    "open_in_tab": false
   },
 
   "icons": {

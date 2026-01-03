@@ -17,8 +17,8 @@ import {
   clearErrorState,
   markAllRead
 } from '../lib/storage.js';
-import { fetchMessages, deleteMessages, sendMessage, createWebSocketConnection, validateCredentials, ERROR_TYPES } from '../lib/api.js';
-import { Page, openPageInWindow, openUrlInWindow } from '../lib/navigation.js';
+import { acknowledgeEmergency, fetchMessages, deleteMessages, sendMessage, createWebSocketConnection, validateCredentials, ERROR_TYPES } from '../lib/api.js';
+import { Page, openPageInWindow, openUrlInTab, createOffscreenDocument, closeOffscreenDocument } from '../lib/navigation.js';
 import { logger } from '../lib/logger.js';
 
 const MESSAGE_REFRESH_ALARM_NAME = 'refreshMessages';
@@ -102,6 +102,9 @@ async function cleanupIconCache() {
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   logger.info('Extension installed/updated:', details.reason);
+  if (details.reason === 'install') {
+    openPageInWindow(Page.ROOT);
+  }
   
   await setupAlarms();
   await purgeDeletedMessages();
@@ -341,11 +344,14 @@ async function buildContextMenus() {
   const devices = await getDevices();
   
   // Browser action context menu items (right-click on extension icon)
-  chrome.contextMenus.create({
-    id: 'pop-out',
-    title: 'Pop-Out',
-    contexts: ['action']
-  });
+  // Only show pop-out option if alwaysPopOut is not enabled
+  if (!settings.alwaysPopOut) {
+    chrome.contextMenus.create({
+      id: 'pop-out',
+      title: 'Pop-Out',
+      contexts: ['action']
+    });
+  }
   if (session?.secret && session?.deviceId) {
     chrome.contextMenus.create({
       id: 'mark-all-read',
@@ -712,12 +718,11 @@ async function showNotification(message) {
     requireInteraction: message.priority >= 2 // Emergency messages stay visible
   };
   
-  // Add buttons for emergency messages that need acknowledgment
-  if (message.priority === 2 && message.acked === 0 && message.receipt) {
-    options.buttons = [
-      { title: 'Acknowledge' }
-    ];
-  }
+  // max 2 buttons
+  options.buttons = [
+    { title: 'Dismiss' },
+    { title: 'Copy' }
+  ];
   
   try {
     await chrome.notifications.create(notificationId, options);
@@ -746,9 +751,9 @@ chrome.notifications.onClicked.addListener(async (notificationId) => {
     const messages = await getMessages();
     const message = messages.find(m => m.id === messageId);
     
-    // Open URL if present
+    // Open URL if present (in new tab, not window)
     if (message?.url) {
-      await openUrlInWindow(message.url);
+      openUrlInTab(message.url);
     }
     
     // Mark as read and dismiss
@@ -777,29 +782,56 @@ async function markMessageAsReadFromNotification(notificationId) {
   await updateBadge();
 }
 
-// Handle notification button clicks (for emergency acknowledgment)
+// Handle notification button clicks
 chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
-  if (notificationId.startsWith('pushover-msg-') && buttonIndex === 0) {
-    const messageId = parseInt(notificationId.replace('pushover-msg-', ''), 10);
-    
-    // Find the message and acknowledge it
-    const messages = await getVisibleMessages();
-    const message = messages.find(m => m.id === messageId);
-    
-    if (message?.receipt) {
-      const session = await getSession();
-      if (session?.secret) {
-        try {
-          const { acknowledgeEmergency } = await import('../lib/api.js');
-          await acknowledgeEmergency(session.secret, message.receipt);
-          chrome.notifications.clear(notificationId);
-        } catch (error) {
-          logger.error('Failed to acknowledge emergency:', error);
-        }
+  if (!notificationId.startsWith('pushover-msg-')) return;
+  logger.debug('Notification clicked:', notificationId, ', Button index:', buttonIndex);
+  
+  const messageId = parseInt(notificationId.replace('pushover-msg-', ''), 10);
+  const messages = await getVisibleMessages();
+  const message = messages.find(m => m.id === messageId);
+  if (!message) return;
+  
+  const isEmergency = message.priority === 2 && message.acked === 0 && message.receipt;
+  
+  switch (buttonIndex) {
+    case 0:
+      if (isEmergency) {
+        await handleAcknowledgeEmergency(notificationId, message);
+      } else {
+        await markMessageAsReadFromNotification(notificationId);
+        chrome.notifications.clear(notificationId);
       }
-    }
+      return;
+    case 1:
+      await handleCopyToClipboard(message.message || '');
+      await markMessageAsReadFromNotification(notificationId);
+      chrome.notifications.clear(notificationId);
+      return;
   }
 });
+
+async function handleAcknowledgeEmergency(notificationId, message) {
+  const session = await getSession();
+  if (!session?.secret) return;
+  
+  try {
+    await acknowledgeEmergency(session.secret, message.receipt);
+    markMessageAsReadFromNotification(notificationId);
+    chrome.notifications.clear(notificationId);
+  } catch (error) {
+    logger.error('Failed to acknowledge emergency:', error);
+  }
+}
+
+async function handleCopyToClipboard(text) {
+  // Use offscreen document API for clipboard access in service worker
+  logger.info('Copying text to clipboard:', text);
+  await createOffscreenDocument();
+  const result = await chrome.runtime.sendMessage({ action: 'copyToClipboard', text: text });
+  logger.info('Offscreen document copy result:', result?.success);
+  await closeOffscreenDocument();
+}
 
 // =============================================================================
 // Storage Change Listener
@@ -819,7 +851,8 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   }
   
   // Reconfigure alarms and WebSocket when settings change
-  if (area === 'sync' && changes.settings) {
+  if (area === 'local' && changes.settings) {
+    const newSettings = changes.settings.newValue;
     await setupAlarms();
     // Connect or disconnect WebSocket based on new refresh interval setting
     await connectWebSocket();

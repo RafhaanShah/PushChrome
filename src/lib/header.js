@@ -59,7 +59,10 @@ function initHeader(options) {
   // Popout button (only shown in popup mode)
   if (isPopupMode()) {
     const popoutBtn = createIconButton('popout-btn', ICONS.popout, 'Open in new window');
-    popoutBtn.addEventListener('click', () => openPageInWindow(currentPage));
+    popoutBtn.addEventListener('click', () => {
+      openPageInWindow(currentPage);
+      window.close();
+    });
     headerActions.appendChild(popoutBtn);
   }
 

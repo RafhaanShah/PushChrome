@@ -200,6 +200,7 @@ function createMessageElement(msg, isUnread) {
         <div class="message-time" title="${new Date(msg.date * 1000).toLocaleString()}">${timeText}</div>
         ${isUnread ? '<div class="unread-indicator"></div>' : ''}
       </div>
+      <button class="message-copy" title="Copy message">📋</button>
       <button class="message-delete" title="Delete message">🗑️</button>
     </div>
     <div class="message-title-row">
@@ -210,6 +211,10 @@ function createMessageElement(msg, isUnread) {
     ${urlHtml}
     ${emergencyHtml}
   `;
+
+  div.querySelector('.message-copy').addEventListener('click', async () => {
+    await copyMessage(msg, div.querySelector('.message-copy'));
+  });
 
   div.querySelector('.message-delete').addEventListener('click', async () => {
     await deleteMessage(msg.id, div);
@@ -222,6 +227,20 @@ function createMessageElement(msg, isUnread) {
   }
 
   return div;
+}
+
+async function copyMessage(msg, button) {
+  try {
+    await navigator.clipboard.writeText(msg.message);
+    const originalText = button.textContent;
+    button.textContent = '✅';
+    setTimeout(() => {
+      button.textContent = originalText;
+    }, 1500);
+  } catch (err) {
+    logger.error('Failed to copy:', err);
+    showStatus('Failed to copy', true);
+  }
 }
 
 async function deleteMessage(messageId, element) {

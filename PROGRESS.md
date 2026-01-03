@@ -55,7 +55,7 @@ src/
 - `clearSession()` → Removes session
 - `isLoggedIn()` → Returns boolean
 
-**Settings Storage** (chrome.storage.sync - synced across devices):
+**Settings Storage** (chrome.storage.local):
 - `getSettings()` → Returns settings with defaults
 - `saveSettings(settings)` → Merges and saves settings
 - Default settings: `{ apiToken, userKey, refreshInterval: 5, notificationsEnabled: true, maxMessages: 50 }`
@@ -205,7 +205,7 @@ src/
 - Badge icon toggle
 
 **Save Functionality:**
-- Saves all settings to `chrome.storage.sync`
+- Saves all settings to `chrome.storage.local`
 - Updates Chrome alarm interval on save
 - Shows success/error feedback
 

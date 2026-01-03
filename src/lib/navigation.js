@@ -1,3 +1,4 @@
+import { logger } from './logger.js';
 import * as storage from './storage.js';
 
 const Page = {
@@ -17,6 +18,7 @@ const PAGE_PATHS = {
 };
 
 function navigateTo(page, options = {}) {
+    logger.info('Navigating to page:', page);
     const { replace = false } = options;
     const path = PAGE_PATHS[page];
 
@@ -34,11 +36,16 @@ function isPopupMode() {
 function openPageInWindow(page) {
     const url = chrome.runtime.getURL(`src/pages/${PAGE_PATHS[page]}`);
     openUrlInWindow(url);
-    window.close();
 }
 
 function openUrlInWindow(url) {
+    logger.info('Opening URL in window:', url);
     chrome.windows.create({ url, type: 'popup' });
+}
+
+function openUrlInTab(url) {
+    logger.info('Opening URL in tab:', url);
+    chrome.tabs.create({ url });
 }
 
 async function initWindowMode(page, force = false) {
@@ -54,11 +61,51 @@ async function initWindowMode(page, force = false) {
     }
 }
 
+async function createOffscreenDocument() {
+    if(await hasOffscreenDocument()) {
+        return;
+    }
+    
+    logger.info('Creating offscreen document');
+    await chrome.offscreen.createDocument({
+        url: chrome.runtime.getURL('src/pages/offscreen.html'),
+        reasons: ['CLIPBOARD'],
+        justification: 'Copy notification message to clipboard'
+    });
+}
+
+async function hasOffscreenDocument() {
+    if ('getContexts' in chrome.runtime) {
+        const contexts = await chrome.runtime.getContexts({
+            contextTypes: ['OFFSCREEN_DOCUMENT'],
+            // documentUrls: [OFFSCREEN_DOCUMENT_PATH]
+        });
+        return Boolean(contexts.length);
+    }
+        
+    const matchedClients = await clients.matchAll();
+    return matchedClients.some(client => {
+        return client.url.includes(chrome.runtime.id);
+    });
+}
+
+async function closeOffscreenDocument() {
+    if (!await hasOffscreenDocument()) {
+        return;
+    }
+    
+    logger.info('Closing offscreen document');
+    await chrome.offscreen.closeDocument();
+}
+
 export {
     Page,
     navigateTo,
     isPopupMode,
     openPageInWindow,
     openUrlInWindow,
+    openUrlInTab,
     initWindowMode,
+    createOffscreenDocument,
+    closeOffscreenDocument,
 };

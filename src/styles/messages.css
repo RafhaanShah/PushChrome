@@ -165,10 +165,10 @@
   opacity: 0;
 }
 
+.message-copy,
 .message-delete {
   position: absolute;
   top: 10px;
-  right: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -185,8 +185,23 @@
   font-size: 12px;
 }
 
+.message-copy {
+  right: 38px;
+}
+
+.message-delete {
+  right: 10px;
+}
+
+.message-item:hover .message-copy,
 .message-item:hover .message-delete {
   opacity: 1;
+}
+
+.message-copy:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #3b82f6;
 }
 
 .message-delete:hover {
