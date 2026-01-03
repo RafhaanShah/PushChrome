@@ -1,6 +1,6 @@
 // Pushover Chrome Extension - Send Message Page
 import { getSettings, getDevices, getSendPreferences, saveSendPreferences } from '../lib/storage.js';
-import { $ } from '../lib/utils.js';
+import { $, createElement } from '../lib/utils.js';
 import { initWindowMode } from '../lib/navigation.js';
 import { initHeader, Page } from '../lib/header.js';
 
@@ -100,10 +100,7 @@ async function loadDevices() {
   const devices = await getDevices();
 
   devices.forEach(device => {
-    const option = document.createElement('option');
-    option.value = device;
-    option.textContent = device;
-    elements.device.appendChild(option);
+    elements.device.appendChild(createElement('option', { value: device, textContent: device }));
   });
 }
 
@@ -159,10 +156,7 @@ async function handleRefreshDevices() {
       // Clear and repopulate device list
       elements.device.innerHTML = '<option value="">All devices</option>';
       result.devices.forEach(device => {
-        const option = document.createElement('option');
-        option.value = device;
-        option.textContent = device;
-        elements.device.appendChild(option);
+        elements.device.appendChild(createElement('option', { value: device, textContent: device }));
       });
 
       // Restore selection if still valid
@@ -327,8 +321,8 @@ async function handleSubmit(e) {
 }
 
 function setLoading(isLoading) {
-  const textEl = elements.sendBtn.querySelector('.btn-text');
-  const loadingEl = elements.sendBtn.querySelector('.btn-loading');
+  const textEl = $('.btn-text', elements.sendBtn);
+  const loadingEl = $('.btn-loading', elements.sendBtn);
 
   if (isLoading) {
     elements.sendBtn.disabled = true;

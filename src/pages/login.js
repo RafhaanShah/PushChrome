@@ -186,8 +186,8 @@ async function handleDeviceBack() {
 }
 
 function setLoading(button, isLoading) {
-  const textEl = button.querySelector('.btn-text');
-  const loadingEl = button.querySelector('.btn-loading');
+  const textEl = $('.btn-text', button);
+  const loadingEl = $('.btn-loading', button);
 
   if (isLoading) {
     button.disabled = true;

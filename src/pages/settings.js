@@ -198,8 +198,8 @@ async function handleSave() {
 }
 
 function setLoading(button, isLoading) {
-  const textEl = button.querySelector('.btn-text');
-  const loadingEl = button.querySelector('.btn-loading');
+  const textEl = $('.btn-text', button);
+  const loadingEl = $('.btn-loading', button);
 
   if (isLoading) {
     button.disabled = true;
@@ -223,9 +223,9 @@ function hideValidateResult() {
 }
 
 function showSaveSuccess() {
-  const textEl = elements.saveBtn.querySelector('.btn-text');
-  const loadingEl = elements.saveBtn.querySelector('.btn-loading');
-  const successEl = elements.saveBtn.querySelector('.btn-success');
+  const textEl = $('.btn-text', elements.saveBtn);
+  const loadingEl = $('.btn-loading', elements.saveBtn);
+  const successEl = $('.btn-success', elements.saveBtn);
 
   loadingEl.classList.add('hidden');
   textEl.classList.add('hidden');

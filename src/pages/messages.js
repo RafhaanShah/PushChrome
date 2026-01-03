@@ -211,16 +211,16 @@ function createMessageElement(msg, isUnread) {
     ${emergencyHtml}
   `;
 
-  div.querySelector('.message-copy').addEventListener('click', async () => {
-    await copyMessage(msg, div.querySelector('.message-copy'));
+  $('.message-copy', div).addEventListener('click', async () => {
+    await copyMessage(msg, $('.message-copy', div));
   });
 
-  div.querySelector('.message-delete').addEventListener('click', async () => {
+  $('.message-delete', div).addEventListener('click', async () => {
     await deleteMessage(msg.id, div);
   });
 
   if (emergencyHtml) {
-    div.querySelector('.btn-ack').addEventListener('click', async (e) => {
+    $('.btn-ack', div).addEventListener('click', async (e) => {
       await acknowledgeMessage(msg.receipt, msg.id, e.target);
     });
   }
@@ -336,7 +336,7 @@ function setRefreshingState(refreshing) {
   const btn = headerController?.getButton('refresh-btn');
   if (!btn) return;
 
-  const icon = btn.querySelector('.refresh-icon');
+  const icon = $('.refresh-icon', btn);
 
   if (refreshing) {
     btn.disabled = true;

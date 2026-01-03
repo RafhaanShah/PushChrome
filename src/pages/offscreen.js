@@ -1,12 +1,14 @@
-console.info('Initializing offscreen page');
+import { $ } from '../lib/utils.js';
+
+console.info('Offscreen page initialized');
 
 // https://github.com/GoogleChrome/chrome-extensions-samples/tree/main/functional-samples/cookbook.offscreen-clipboard-write
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.action === 'copyToClipboard') {
     console.info('Offscreen page received copyToClipboard request');
 
     try {
-      const textEl = document.querySelector('#text');
+      const textEl = $('#text');
       textEl.value = request.text;
       textEl.select();
       document.execCommand('copy');
