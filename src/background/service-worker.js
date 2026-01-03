@@ -717,11 +717,23 @@ async function showNotification(message) {
     requireInteraction: message.priority >= 2 // Emergency messages stay visible
   };
 
-  // max 2 buttons
-  options.buttons = [
-    { title: 'Dismiss' },
-    { title: 'Copy' }
-  ];
+  const isEmergency = message.priority === 2 && message.acked === 0 && message.receipt;
+
+  if (isEmergency) {
+    // Emergency messages: Acknowledge, and Open URL if present
+    options.buttons = message.url
+      ? [{ title: 'Acknowledge' }, { title: 'Open URL' }]
+      : [{ title: 'Acknowledge' }];
+  } else if (message.url) {
+    // Messages with URL: Copy and Open URL buttons
+    options.buttons = [
+      { title: 'Copy' },
+      { title: 'Open URL' }
+    ];
+  } else {
+    // Normal messages: just Copy button
+    options.buttons = [{ title: 'Copy' }];
+  }
 
   try {
     await chrome.notifications.create(notificationId, options);
@@ -741,21 +753,10 @@ function getPriorityForNotification(pushoverPriority) {
   return 2;
 }
 
-// Handle notification clicks
+// Handle notification clicks - always open the messages page
 chrome.notifications.onClicked.addListener(async (notificationId) => {
   if (notificationId.startsWith('pushover-msg-')) {
-    const messageId = parseInt(notificationId.replace('pushover-msg-', ''), 10);
-
-    // Find message to check for URL
-    const messages = await getMessages();
-    const message = messages.find(m => m.id === messageId);
-
-    // Open URL if present (in new tab, not window)
-    if (message?.url) {
-      openUrlInTab(message.url);
-    }
-
-    // Mark as read and dismiss
+    openPageInWindow(Page.MESSAGES);
     await markMessageAsReadFromNotification(notificationId);
     chrome.notifications.clear(notificationId);
   }
@@ -782,9 +783,13 @@ async function markMessageAsReadFromNotification(notificationId) {
 }
 
 // Handle notification button clicks
+// Button layout:
+// - Emergency: [Acknowledge]
+// - With URL:  [Copy, Open URL]
+// - Normal:    [Copy]
 chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
   if (!notificationId.startsWith('pushover-msg-')) return;
-  console.debug('Notification clicked:', notificationId, ', Button index:', buttonIndex);
+  console.debug('Notification button clicked:', notificationId, ', Button index:', buttonIndex);
 
   const messageId = parseInt(notificationId.replace('pushover-msg-', ''), 10);
   const messages = await getVisibleMessages();
@@ -793,20 +798,31 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
 
   const isEmergency = message.priority === 2 && message.acked === 0 && message.receipt;
 
-  switch (buttonIndex) {
-    case 0:
-      if (isEmergency) {
-        await handleAcknowledgeEmergency(message.receipt, message.id);
-      } else {
-        await markMessageAsReadFromNotification(notificationId);
-        chrome.notifications.clear(notificationId);
-      }
-      return;
-    case 1:
-      await handleCopyToClipboard(message.message || '');
+  if (isEmergency) {
+    // Button 0: Acknowledge, Button 1: Open URL (if present)
+    if (buttonIndex === 0) {
+      await handleAcknowledgeEmergency(message.receipt, message.id);
+    } else if (buttonIndex === 1 && message.url) {
+      openUrlInTab(message.url);
       await markMessageAsReadFromNotification(notificationId);
       chrome.notifications.clear(notificationId);
-      return;
+    }
+  } else if (message.url) {
+    // Button 0: Copy (url), Button 1: Open URL
+    if (buttonIndex === 0) {
+      await handleCopyToClipboard(message.url);
+    } else if (buttonIndex === 1) {
+      openUrlInTab(message.url);
+    }
+    await markMessageAsReadFromNotification(notificationId);
+    chrome.notifications.clear(notificationId);
+  } else {
+    // Button 0: Copy (message)
+    if (buttonIndex === 0) {
+      await handleCopyToClipboard(message.message || '');
+    }
+    await markMessageAsReadFromNotification(notificationId);
+    chrome.notifications.clear(notificationId);
   }
 });
 
