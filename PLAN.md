@@ -1016,7 +1016,7 @@ async function refreshMessages(options = {}) {
       showErrorNotification('receive', 'Unable to receive messages. Please re-login.');
     } else if (error.errorType === 'server') {
       // Transient error - don't set error state, just log
-      logger.warn('Temporary server error, will retry:', error.message);
+      console.warn('Temporary server error, will retry:', error.message);
     }
     await updateBadge();
   }

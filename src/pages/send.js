@@ -1,7 +1,6 @@
 // Pushover Chrome Extension - Send Message Page
 import { getSettings, getDevices, getSendPreferences, saveSendPreferences } from '../lib/storage.js';
 import { $ } from '../lib/utils.js';
-import { logger } from '../lib/logger.js';
 import { initWindowMode } from '../lib/navigation.js';
 import { initHeader, Page } from '../lib/header.js';
 
@@ -15,6 +14,9 @@ const elements = {
   device: null,
   refreshDevicesBtn: null,
   priority: null,
+  emergencyOptions: null,
+  retry: null,
+  expire: null,
   url: null,
   urlCount: null,
   urlTitle: null,
@@ -58,6 +60,9 @@ async function init() {
   elements.device = $('#device');
   elements.refreshDevicesBtn = $('#refresh-devices-btn');
   elements.priority = $('#priority');
+  elements.emergencyOptions = $('#emergency-options');
+  elements.retry = $('#retry');
+  elements.expire = $('#expire');
   elements.url = $('#url');
   elements.urlCount = $('#url-count');
   elements.urlTitle = $('#url-title');
@@ -87,7 +92,7 @@ async function loadSettings() {
   if (!settings.apiToken || !settings.userKey) {
     elements.credentialsWarning.classList.remove('hidden');
   }
-  
+
   validateForm();
 }
 
@@ -104,7 +109,7 @@ async function loadDevices() {
 
 async function loadSendPreferences() {
   const prefs = await getSendPreferences();
-  
+
   if (prefs.device) {
     elements.device.value = prefs.device;
   }
@@ -114,6 +119,8 @@ async function loadSendPreferences() {
   if (prefs.sound) {
     elements.sound.value = prefs.sound;
   }
+
+  handlePriorityChange();
 }
 
 function bindEvents() {
@@ -122,27 +129,33 @@ function bindEvents() {
   elements.url.addEventListener('input', handleInput);
   elements.urlTitle.addEventListener('input', handleInput);
   elements.refreshDevicesBtn.addEventListener('click', handleRefreshDevices);
+  elements.priority.addEventListener('change', handlePriorityChange);
   elements.attachmentBtn.addEventListener('click', handleAttachmentClick);
   elements.attachment.addEventListener('change', handleAttachmentChange);
   elements.attachmentRemove.addEventListener('click', clearAttachment);
   elements.form.addEventListener('submit', handleSubmit);
 }
 
+function handlePriorityChange() {
+  const isEmergency = elements.priority.value === '2';
+  elements.emergencyOptions.classList.toggle('hidden', !isEmergency);
+}
+
 async function handleRefreshDevices() {
   const btn = elements.refreshDevicesBtn;
-  
+
   if (btn.classList.contains('refreshing')) return;
-  
+
   btn.classList.add('refreshing');
   btn.disabled = true;
-  
+
   try {
     const result = await chrome.runtime.sendMessage({ action: 'refreshDevices' });
-    
+
     if (result?.success && result.devices) {
       // Remember current selection
       const currentValue = elements.device.value;
-      
+
       // Clear and repopulate device list
       elements.device.innerHTML = '<option value="">All devices</option>';
       result.devices.forEach(device => {
@@ -151,14 +164,14 @@ async function handleRefreshDevices() {
         option.textContent = device;
         elements.device.appendChild(option);
       });
-      
+
       // Restore selection if still valid
       if (result.devices.includes(currentValue)) {
         elements.device.value = currentValue;
       }
     }
   } catch (error) {
-    logger.error('Failed to refresh devices:', error);
+    console.error('Failed to refresh devices:', error);
   } finally {
     btn.classList.remove('refreshing');
     btn.disabled = false;
@@ -194,7 +207,7 @@ async function handleAttachmentChange(e) {
     elements.attachmentPreview.classList.remove('hidden');
     hideMessages();
   } catch (error) {
-    logger.error('Failed to read attachment:', error);
+    console.error('Failed to read attachment:', error);
     showError('Failed to read attachment.');
     clearAttachment();
   }
@@ -264,13 +277,16 @@ async function handleSubmit(e) {
   setLoading(true);
 
   try {
+    const priority = parseInt(elements.priority.value, 10);
     const params = {
       token: settings.apiToken,
       user: settings.userKey,
       message: message,
       title: elements.title.value.trim() || undefined,
       device: elements.device.value || undefined,
-      priority: parseInt(elements.priority.value, 10),
+      priority,
+      retry: priority === 2 ? parseInt(elements.retry.value, 10) : undefined,
+      expire: priority === 2 ? parseInt(elements.expire.value, 10) : undefined,
       url: elements.url.value.trim() || undefined,
       urlTitle: elements.urlTitle.value.trim() || undefined,
       sound: elements.sound.value || undefined,
@@ -279,9 +295,9 @@ async function handleSubmit(e) {
     };
 
     // Delegate to service worker so send continues if popup closes
-    const result = await chrome.runtime.sendMessage({ 
-      action: 'sendMessage', 
-      params 
+    const result = await chrome.runtime.sendMessage({
+      action: 'sendMessage',
+      params
     });
 
     if (!result.success) {

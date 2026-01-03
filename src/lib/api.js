@@ -1,8 +1,6 @@
 // Pushover Chrome Extension - API Wrapper
 // Handles all communication with Pushover API
 
-import { logger } from './logger.js';
-
 const API_BASE = 'https://api.pushover.net/1';
 
 // Error types for classification
@@ -25,28 +23,28 @@ function classifyError(status, errors) {
     case 403:
       return ERROR_TYPES.AUTH;
   }
-  
+
   if (status >= 500) {
     return ERROR_TYPES.SERVER;
   }
-  
+
   // Fall back to error message content analysis
   const errorStr = (errors || []).join(' ').toLowerCase();
-  
+
   switch (true) {
     case errorStr.includes('secret'):
     case errorStr.includes('not logged in'):
     case errorStr.includes('session'):
       return ERROR_TYPES.AUTH;
-      
-    case errorStr.includes('device') && 
-         (errorStr.includes('not found') || errorStr.includes('invalid') || errorStr.includes('not registered')):
+
+    case errorStr.includes('device') &&
+      (errorStr.includes('not found') || errorStr.includes('invalid') || errorStr.includes('not registered')):
       return ERROR_TYPES.DEVICE;
-      
+
     case errorStr.includes('token'):
     case errorStr.includes('user identifier'):
       return ERROR_TYPES.VALIDATION;
-      
+
     default:
       return ERROR_TYPES.UNKNOWN;
   }
@@ -60,11 +58,11 @@ class PushoverAPIError extends Error {
     this.errors = errors;
     this.errorType = errorType || classifyError(status, errors);
   }
-  
+
   get isRecoverable() {
-    return this.errorType === ERROR_TYPES.SERVER || 
-           this.errorType === ERROR_TYPES.NETWORK || 
-           this.errorType === ERROR_TYPES.RATE_LIMIT;
+    return this.errorType === ERROR_TYPES.SERVER ||
+      this.errorType === ERROR_TYPES.NETWORK ||
+      this.errorType === ERROR_TYPES.RATE_LIMIT;
   }
 }
 
@@ -82,7 +80,7 @@ function formatErrors(errors) {
 async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
   const { signal, ...rest } = options;
-  
+
   let response;
   try {
     response = await fetch(url, {
@@ -125,8 +123,8 @@ async function apiRequest(endpoint, options = {}) {
   }
 
   if (!response.ok && response.status !== 412) {
-    const errors = Array.isArray(data.errors) ? data.errors : 
-                   (typeof data.errors === 'object' ? Object.values(data.errors).flat() : []);
+    const errors = Array.isArray(data.errors) ? data.errors :
+      (typeof data.errors === 'object' ? Object.values(data.errors).flat() : []);
     throw new PushoverAPIError(
       formatErrors(data.errors) || 'API request failed',
       response.status,
@@ -257,7 +255,7 @@ export async function acknowledgeEmergency(secret, receiptId) {
 // Message API (for sending messages)
 // =============================================================================
 
-export async function sendMessage({ token, user, message, title, device, priority, url, urlTitle, sound, attachmentBuffer, attachmentType }) {
+export async function sendMessage({ token, user, message, title, device, priority, retry, expire, url, urlTitle, sound, attachmentBuffer, attachmentType }) {
   const formData = new FormData();
   formData.append('token', token);
   formData.append('user', user);
@@ -265,10 +263,14 @@ export async function sendMessage({ token, user, message, title, device, priorit
   if (title) formData.append('title', title);
   if (device) formData.append('device', device);
   if (priority !== undefined) formData.append('priority', String(priority));
+  if (priority === 2) {
+    formData.append('retry', String(retry || 60));
+    formData.append('expire', String(expire || 3600));
+  }
   if (url) formData.append('url', url);
   if (urlTitle) formData.append('url_title', urlTitle);
   if (sound) formData.append('sound', sound);
-  
+
   if (attachmentBuffer && attachmentType) {
     const blob = new Blob([attachmentBuffer], { type: attachmentType });
     formData.append('attachment', blob, 'attachment');
@@ -342,52 +344,52 @@ const WEBSOCKET_URL = 'wss://client.pushover.net/push';
 
 export function createWebSocketConnection(deviceId, secret, handlers = {}) {
   const { onMessage, onReload, onError, onClose, onOpen } = handlers;
-  
+
   const ws = new WebSocket(WEBSOCKET_URL);
-  
+
   ws.onopen = () => {
     const loginMessage = `login:${deviceId}:${secret}\n`;
     ws.send(loginMessage);
     onOpen?.();
   };
-  
+
   ws.onmessage = async (event) => {
     const data = event.data instanceof Blob ? await event.data.text() : event.data;
-    
+
     if (data === '#') {
       return;
     }
-    
+
     if (data === '!') {
       onMessage?.();
       return;
     }
-    
+
     if (data === 'R') {
       onReload?.();
       return;
     }
-    
+
     if (data === 'E') {
       onError?.('permanent', 'Permanent error occurred. Please re-login.');
       return;
     }
-    
+
     if (data === 'A') {
       onError?.('session_conflict', 'Device logged in from another session.');
       return;
     }
   };
-  
+
   ws.onerror = (error) => {
-    logger.error('WebSocket error:', error);
+    console.error('WebSocket error:', error);
     onError?.('connection', 'WebSocket connection error');
   };
-  
+
   ws.onclose = (event) => {
     onClose?.(event.code, event.reason);
   };
-  
+
   return ws;
 }
 

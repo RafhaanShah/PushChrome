@@ -3,7 +3,6 @@
 import * as storage from '../lib/storage.js';
 import * as api from '../lib/api.js';
 import { $, debounce, escapeHtml, formatRelativeTime, getPriorityClass, getPriorityLabel, linkifyText } from '../lib/utils.js';
-import { logger } from '../lib/logger.js';
 import { Page, navigateTo, initWindowMode } from '../lib/navigation.js';
 import { initHeader, ICONS } from '../lib/header.js';
 
@@ -14,7 +13,7 @@ let hadUnreadOnOpen = false;
 
 async function init() {
   await initWindowMode(Page.MESSAGES);
-  
+
   headerController = initHeader({
     title: 'PushChrome',
     currentPage: Page.MESSAGES,
@@ -23,7 +22,7 @@ async function init() {
       { id: 'mark-read-btn', icon: ICONS.markRead, title: 'Mark all as read', onClick: handleMarkAllRead, hidden: true },
     ],
   });
-  
+
   setupEventListeners();
   setupMessageListener();
   await checkErrorState();
@@ -33,22 +32,22 @@ async function init() {
 function setupEventListeners() {
   $('#login-btn')?.addEventListener('click', () => navigateTo(Page.LOGIN));
   $('#retry-btn')?.addEventListener('click', () => refreshMessages(false));
-  
+
   // Error banner actions
   $('#error-banner-action')?.addEventListener('click', handleErrorAction);
   $('#error-banner-dismiss')?.addEventListener('click', dismissErrorBanner);
-  
+
   // Save scroll position on page unload/visibility change
   window.addEventListener('scroll', debounce(() => {
     storage.saveScrollPosition(window.scrollY);
   }, 100));
-  
+
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
       storage.saveScrollPosition(window.scrollY);
     }
   });
-  
+
   window.addEventListener('beforeunload', () => {
     storage.saveScrollPosition(window.scrollY);
   });
@@ -63,7 +62,7 @@ function setupMessageListener() {
         updateMarkReadButton();
       });
     }
-    
+
     if (request.action === 'errorStateChanged') {
       checkErrorState();
     }
@@ -79,13 +78,13 @@ async function checkAuthAndLoadMessages() {
   }
 
   settings = await storage.getSettings();
-  
+
   // Check if there are unread messages before loading
   const unreadCount = await storage.getUnreadCount();
   hadUnreadOnOpen = unreadCount > 0;
-  
+
   await loadAndDisplayMessages();
-  
+
   // Restore scroll position only if no unread messages
   if (!hadUnreadOnOpen) {
     const savedPosition = await storage.getScrollPosition();
@@ -95,16 +94,16 @@ async function checkAuthAndLoadMessages() {
       });
     }
   }
-  
+
   // Show/hide mark as read button based on setting
   updateMarkReadButton();
-  
+
   // Conditionally mark as read on open
   if (settings.markAsReadOnOpen) {
     await markMessagesAsRead();
     await updateBadge();
   }
-  
+
   // Auto-refresh on popup open (debounced - only if last refresh > 1 min ago)
   await refreshMessages(true);
 }
@@ -152,14 +151,14 @@ function renderMessageList(messages, preserveScroll = false) {
   const container = $('#message-list');
   const previousScrollTop = container.scrollTop;
   const previousScrollHeight = container.scrollHeight;
-  
+
   container.innerHTML = '';
 
   for (const msg of messages) {
     const messageEl = createMessageElement(msg, !msg._seen);
     container.appendChild(messageEl);
   }
-  
+
   if (preserveScroll && previousScrollTop > 0) {
     const newScrollHeight = container.scrollHeight;
     const heightDiff = newScrollHeight - previousScrollHeight;
@@ -173,18 +172,18 @@ function createMessageElement(msg, isUnread) {
   div.dataset.id = msg.id;
 
   const iconUrl = msg.icon ? api.getIconUrl(msg.icon) : null;
-  const iconHtml = iconUrl 
+  const iconHtml = iconUrl
     ? `<img src="${escapeHtml(iconUrl)}" alt="" class="message-icon" loading="lazy">`
     : `<div class="message-icon message-icon-default">📨</div>`;
 
   const titleText = msg.title || msg.app || 'Notification';
   const messageBody = msg.html === 1 ? msg.message : linkifyText(msg.message);
   const timeText = formatRelativeTime(msg.date);
-  const priorityBadge = msg.priority !== 0 
-    ? `<span class="priority-badge ${getPriorityClass(msg.priority)}">${getPriorityLabel(msg.priority)}</span>` 
+  const priorityBadge = msg.priority !== 0
+    ? `<span class="priority-badge ${getPriorityClass(msg.priority)}">${getPriorityLabel(msg.priority)}</span>`
     : '';
 
-  const urlHtml = msg.url 
+  const urlHtml = msg.url
     ? `<a href="${escapeHtml(msg.url)}" class="message-link" target="_blank" rel="noopener">${escapeHtml(msg.url_title || 'Open Link')}</a>`
     : '';
 
@@ -222,7 +221,7 @@ function createMessageElement(msg, isUnread) {
 
   if (emergencyHtml) {
     div.querySelector('.btn-ack').addEventListener('click', async (e) => {
-      await acknowledgeMessage(msg.receipt, e.target);
+      await acknowledgeMessage(msg.receipt, msg.id, e.target);
     });
   }
 
@@ -238,18 +237,18 @@ async function copyMessage(msg, button) {
       button.textContent = originalText;
     }, 1500);
   } catch (err) {
-    logger.error('Failed to copy:', err);
+    console.error('Failed to copy:', err);
     showStatus('Failed to copy', true);
   }
 }
 
 async function deleteMessage(messageId, element) {
   element.style.opacity = '0.5';
-  
+
   await storage.softDeleteMessage(messageId);
-  
+
   element.remove();
-  
+
   const visible = await storage.getVisibleMessages();
   if (visible.length === 0) {
     $('#message-list').classList.add('hidden');
@@ -257,23 +256,23 @@ async function deleteMessage(messageId, element) {
   }
 }
 
-async function acknowledgeMessage(receipt, button) {
-  const session = await storage.getSession();
-  if (!session) return;
-
+async function acknowledgeMessage(receipt, messageId, button) {
   button.disabled = true;
   button.textContent = 'Acknowledging...';
 
   try {
-    await api.acknowledgeEmergency(session.secret, receipt);
-    button.textContent = 'Acknowledged';
-    button.classList.add('acknowledged');
+    const result = await chrome.runtime.sendMessage({
+      action: 'acknowledgeEmergency',
+      receipt,
+      messageId
+    });
 
-    const messages = await storage.getMessages();
-    const updated = messages.map(m => 
-      m.receipt === receipt ? { ...m, acked: 1 } : m
-    );
-    await storage.saveMessages(updated);
+    if (result.success) {
+      button.textContent = 'Acknowledged';
+      button.classList.add('acknowledged');
+    } else {
+      throw new Error(result.error);
+    }
   } catch (err) {
     button.disabled = false;
     button.textContent = 'Acknowledge';
@@ -289,7 +288,7 @@ async function refreshMessages(checkDebounce = false) {
 
   try {
     // Delegate refresh to service worker
-    const result = await chrome.runtime.sendMessage({ 
+    const result = await chrome.runtime.sendMessage({
       action: 'refreshMessages',
       skipNotifications: true, // We're open, don't need notifications
       checkDebounce: checkDebounce
@@ -318,14 +317,14 @@ async function refreshMessages(checkDebounce = false) {
     // Reload display after refresh
     await loadAndDisplayMessages();
     updateMarkReadButton();
-    
+
     if (settings.markAsReadOnOpen) {
       await markMessagesAsRead();
       await updateBadge();
     }
 
   } catch (err) {
-    logger.error('Refresh error:', err);
+    console.error('Refresh error:', err);
     showStatus('Refresh failed', true);
   } finally {
     isRefreshing = false;
@@ -336,7 +335,7 @@ async function refreshMessages(checkDebounce = false) {
 function setRefreshingState(refreshing) {
   const btn = headerController?.getButton('refresh-btn');
   if (!btn) return;
-  
+
   const icon = btn.querySelector('.refresh-icon');
 
   if (refreshing) {
@@ -350,14 +349,14 @@ function setRefreshingState(refreshing) {
 
 async function markMessagesAsRead() {
   await storage.markAllRead();
-  
+
   // Clear notifications from OS tray since user has seen them
   try {
     await chrome.runtime.sendMessage({ action: 'clearNotifications' });
   } catch (e) {
     // Service worker may not be ready, ignore
   }
-  
+
   // Re-render to remove unread indicators
   await loadAndDisplayMessages();
   updateMarkReadButton();
@@ -417,15 +416,15 @@ let currentErrorState = null;
 async function checkErrorState() {
   const errorState = await storage.getErrorState();
   currentErrorState = errorState;
-  
+
   const banner = $('#error-banner');
   const text = $('#error-banner-text');
   const actionBtn = $('#error-banner-action');
-  
+
   if (errorState?.type && !errorState.recoverable) {
     // Show error banner
     text.textContent = errorState.message;
-    
+
     // Configure action button based on error type
     if (errorState.type === 'receive_auth' || errorState.type === 'receive_device') {
       actionBtn.textContent = 'Re-login';
@@ -436,7 +435,7 @@ async function checkErrorState() {
     } else {
       actionBtn.classList.add('hidden');
     }
-    
+
     banner.classList.remove('hidden');
   } else {
     banner.classList.add('hidden');
@@ -445,7 +444,7 @@ async function checkErrorState() {
 
 async function handleErrorAction() {
   if (!currentErrorState) return;
-  
+
   if (currentErrorState.type === 'receive_auth' || currentErrorState.type === 'receive_device') {
     // Clear session and redirect to login
     await storage.clearSession();

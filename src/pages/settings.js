@@ -2,7 +2,6 @@
 import { validateCredentials } from '../lib/api.js';
 import { getSession, getSettings, saveSettings, saveDevices, clearAll, applyMessageLimit } from '../lib/storage.js';
 import { $ } from '../lib/utils.js';
-import { logger } from '../lib/logger.js';
 import { Page, navigateTo, initWindowMode } from '../lib/navigation.js';
 import { initHeader } from '../lib/header.js';
 
@@ -27,7 +26,6 @@ const elements = {
   badgeEnabled: null,
   markAsReadOnOpen: null,
   alwaysPopOut: null,
-  verboseLogging: null,
   saveBtn: null
 };
 
@@ -55,7 +53,6 @@ async function init() {
   elements.badgeEnabled = $('#badge-enabled');
   elements.markAsReadOnOpen = $('#mark-as-read-on-open');
   elements.alwaysPopOut = $('#always-pop-out');
-  elements.verboseLogging = $('#verbose-logging');
   elements.saveBtn = $('#save-btn');
 
   await loadAccountInfo();
@@ -65,7 +62,7 @@ async function init() {
 
 async function loadAccountInfo() {
   const session = await getSession();
-  
+
   if (session?.userId) {
     isLoggedIn = true;
     elements.deviceName.textContent = session.deviceName || '-';
@@ -94,7 +91,6 @@ async function loadSettings() {
   elements.badgeEnabled.checked = settings.badgeEnabled;
   elements.markAsReadOnOpen.checked = settings.markAsReadOnOpen;
   elements.alwaysPopOut.checked = settings.alwaysPopOut;
-  elements.verboseLogging.checked = settings.verboseLogging;
 }
 
 function bindEvents() {
@@ -133,12 +129,12 @@ async function handleValidate() {
       if (result.devices.length > 0) {
         await saveDevices(result.devices);
       }
-      
+
       // Notify service worker to rebuild context menus with new devices
-      chrome.runtime.sendMessage({ action: 'rebuildContextMenus' }).catch(() => {});
-      
-      const deviceList = result.devices.length > 0 
-        ? `Devices: ${result.devices.join(', ')}` 
+      chrome.runtime.sendMessage({ action: 'rebuildContextMenus' }).catch(() => { });
+
+      const deviceList = result.devices.length > 0
+        ? `Devices: ${result.devices.join(', ')}`
         : 'No devices found';
       showValidateResult(`Valid! ${deviceList}`, true);
     } else {
@@ -164,12 +160,11 @@ async function handleSave() {
       notificationsEnabled: elements.notificationsEnabled.checked,
       badgeEnabled: elements.badgeEnabled.checked,
       markAsReadOnOpen: elements.markAsReadOnOpen.checked,
-      alwaysPopOut: elements.alwaysPopOut.checked,
-      verboseLogging: elements.verboseLogging.checked
+      alwaysPopOut: elements.alwaysPopOut.checked
     };
 
     await saveSettings(newSettings);
-    
+
     // Apply message limit immediately
     await applyMessageLimit();
 
@@ -182,7 +177,7 @@ async function handleSave() {
         });
       }
     } catch (e) {
-      logger.error('Could not update alarm:', e);
+      console.error('Could not update alarm:', e);
     }
 
     showSaveSuccess();

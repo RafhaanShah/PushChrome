@@ -13,6 +13,17 @@
   margin-bottom: 12px;
 }
 
+/* Emergency Options Row */
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.form-row .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
 #send-form label {
   font-size: 13px;
 }

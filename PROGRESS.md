@@ -485,31 +485,6 @@ Right-click on selection → "Send 'text...' to Pushover" → [All devices, Devi
 
 ---
 
-### Step 10a: Configurable Logging ✅
-**Completed:** 2024-12-27
-
-**Created Files:**
-- `src/lib/logger.js` - Centralized logging module
-
-**Updated Files:**
-- `src/lib/storage.js` - Added `verboseLogging: false` to DEFAULT_SETTINGS
-- `src/lib/api.js` - Replaced console.error with logger
-- `src/background/service-worker.js` - Replaced all console calls with logger
-- `src/pages/settings.html` - Added "Verbose logging" checkbox
-- `src/pages/settings.js` - Handle verboseLogging setting
-- `src/pages/send.js` - Replaced console.error with logger
-- `src/pages/messages.js` - Replaced console.error with logger
-
-**Features:**
-- **Logger module**: Centralized logging with `[PushChrome]` prefix
-- **Log levels**: `debug`, `info`, `warn`, `error` methods
-- **Verbose mode**: `debug`/`info` only log when `verboseLogging` setting enabled
-- **Always logged**: `warn`/`error` always output regardless of setting
-- **Settings sync**: Logger listens to `chrome.storage.onChanged` for live updates
-- **UI toggle**: "Verbose logging (for debugging)" checkbox in settings
-
----
-
 ### Step 10b: Icon Caching ✅
 **Completed:** 2024-12-27
 

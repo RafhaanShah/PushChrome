@@ -1,4 +1,3 @@
-import { logger } from './logger.js';
 import * as storage from './storage.js';
 
 const Page = {
@@ -18,7 +17,7 @@ const PAGE_PATHS = {
 };
 
 function navigateTo(page, options = {}) {
-    logger.info('Navigating to page:', page);
+    console.info('Navigating to page:', page);
     const { replace = false } = options;
     const path = PAGE_PATHS[page];
 
@@ -39,12 +38,12 @@ function openPageInWindow(page) {
 }
 
 function openUrlInWindow(url) {
-    logger.info('Opening URL in window:', url);
+    console.info('Opening URL in window:', url);
     chrome.windows.create({ url, type: 'popup' });
 }
 
 function openUrlInTab(url) {
-    logger.info('Opening URL in tab:', url);
+    console.info('Opening URL in tab:', url);
     chrome.tabs.create({ url });
 }
 
@@ -62,11 +61,11 @@ async function initWindowMode(page, force = false) {
 }
 
 async function createOffscreenDocument() {
-    if(await hasOffscreenDocument()) {
+    if (await hasOffscreenDocument()) {
         return;
     }
-    
-    logger.info('Creating offscreen document');
+
+    console.info('Creating offscreen document');
     await chrome.offscreen.createDocument({
         url: chrome.runtime.getURL('src/pages/offscreen.html'),
         reasons: ['CLIPBOARD'],
@@ -82,7 +81,7 @@ async function hasOffscreenDocument() {
         });
         return Boolean(contexts.length);
     }
-        
+
     const matchedClients = await clients.matchAll();
     return matchedClients.some(client => {
         return client.url.includes(chrome.runtime.id);
@@ -93,8 +92,8 @@ async function closeOffscreenDocument() {
     if (!await hasOffscreenDocument()) {
         return;
     }
-    
-    logger.info('Closing offscreen document');
+
+    console.info('Closing offscreen document');
     await chrome.offscreen.closeDocument();
 }
 

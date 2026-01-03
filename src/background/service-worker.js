@@ -1,11 +1,11 @@
 // Pushover Chrome Extension - Service Worker
 // Background script for handling alarms, notifications, and message sync
 
-import { 
-  getSession, 
-  getSettings, 
-  getUnreadCount, 
-  appendMessages, 
+import {
+  getSession,
+  getSettings,
+  getUnreadCount,
+  appendMessages,
   purgeDeletedMessages,
   getVisibleMessages,
   getMessages,
@@ -19,7 +19,6 @@ import {
 } from '../lib/storage.js';
 import { acknowledgeEmergency, fetchMessages, deleteMessages, sendMessage, createWebSocketConnection, validateCredentials, ERROR_TYPES } from '../lib/api.js';
 import { Page, openPageInWindow, openUrlInTab, createOffscreenDocument, closeOffscreenDocument } from '../lib/navigation.js';
-import { logger } from '../lib/logger.js';
 
 const MESSAGE_REFRESH_ALARM_NAME = 'refreshMessages';
 const DEVICE_REFRESH_ALARM_NAME = 'refreshDevices';
@@ -40,20 +39,20 @@ let websocketReconnectTimeout = null;
 
 async function getCachedIconUrl(iconName) {
   if (!iconName) return null;
-  
+
   const iconUrl = `https://api.pushover.net/icons/${iconName}.png`;
-  
+
   try {
     const cache = await caches.open(ICON_CACHE_NAME);
     const cached = await cache.match(iconUrl);
-    
+
     if (cached) {
-      logger.debug('Icon cache hit:', iconName);
+      console.debug('Icon cache hit:', iconName);
       return iconUrl;
     }
-    
+
     // Fetch and cache the icon
-    logger.debug('Icon cache miss, fetching:', iconName);
+    console.debug('Icon cache miss, fetching:', iconName);
     const response = await fetch(iconUrl);
     if (response.ok) {
       // Clone response and add timestamp header for cache cleanup
@@ -64,7 +63,7 @@ async function getCachedIconUrl(iconName) {
     }
     return iconUrl;
   } catch (error) {
-    logger.warn('Icon cache error:', error);
+    console.warn('Icon cache error:', error);
     return iconUrl; // Return URL anyway, let notification handle failure
   }
 }
@@ -75,23 +74,23 @@ async function cleanupIconCache() {
     const keys = await cache.keys();
     const now = Date.now();
     let cleaned = 0;
-    
+
     for (const request of keys) {
       const response = await cache.match(request);
       const cachedAt = response?.headers.get('X-Cached-At');
-      
+
       if (cachedAt && (now - parseInt(cachedAt, 10)) > ICON_CACHE_MAX_AGE_MS) {
         await cache.delete(request);
         cleaned++;
       }
     }
-    
+
     if (cleaned > 0) {
-      logger.info(`Cleaned ${cleaned} expired icons from cache`);
+      console.info(`Cleaned ${cleaned} expired icons from cache`);
     }
     return cleaned;
   } catch (error) {
-    logger.warn('Icon cache cleanup error:', error);
+    console.warn('Icon cache cleanup error:', error);
     return 0;
   }
 }
@@ -101,11 +100,11 @@ async function cleanupIconCache() {
 // =============================================================================
 
 chrome.runtime.onInstalled.addListener(async (details) => {
-  logger.info('Extension installed/updated:', details.reason);
+  console.info('Extension installed/updated:', details.reason);
   if (details.reason === 'install') {
     openPageInWindow(Page.ROOT);
   }
-  
+
   await setupAlarms();
   await purgeDeletedMessages();
   await updateBadge();
@@ -114,8 +113,8 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 });
 
 chrome.runtime.onStartup.addListener(async () => {
-  logger.info('Browser started, initializing extension');
-  
+  console.info('Browser started, initializing extension');
+
   await setupAlarms();
   await purgeDeletedMessages();
   await updateBadge();
@@ -133,36 +132,36 @@ chrome.runtime.onStartup.addListener(async () => {
 async function setupAlarms() {
   const settings = await getSettings();
   const session = await getSession();
-  
+
   // Clear existing refresh alarm
   await chrome.alarms.clear(MESSAGE_REFRESH_ALARM_NAME);
-  
+
   // Only set up refresh alarm if logged in AND periodic refresh is enabled (interval > 0)
   // WebSocket mode (interval = -1) and manual mode (interval = 0) don't use alarms
   if (session?.secret && session?.deviceId && settings.refreshInterval > 0) {
     chrome.alarms.create(MESSAGE_REFRESH_ALARM_NAME, {
       periodInMinutes: settings.refreshInterval
     });
-    logger.info(`Refresh alarm set for every ${settings.refreshInterval} minutes`);
+    console.info(`Refresh alarm set for every ${settings.refreshInterval} minutes`);
   } else if (settings.refreshInterval === -1) {
-    logger.info('Using WebSocket for instant refresh');
+    console.info('Using WebSocket for instant refresh');
   } else if (settings.refreshInterval === 0) {
-    logger.info('Auto-refresh disabled (manual only)');
+    console.info('Auto-refresh disabled (manual only)');
   }
-  
+
   // Clear existing device refresh alarm
   await chrome.alarms.clear(DEVICE_REFRESH_ALARM_NAME);
-  
+
   // Set up device refresh alarm if send credentials are configured and interval > 0
   if (settings.apiToken && settings.userKey && settings.deviceRefreshInterval > 0) {
     chrome.alarms.create(DEVICE_REFRESH_ALARM_NAME, {
       periodInMinutes: settings.deviceRefreshInterval
     });
-    logger.info(`Device refresh alarm set for every ${settings.deviceRefreshInterval} minutes`);
+    console.info(`Device refresh alarm set for every ${settings.deviceRefreshInterval} minutes`);
   } else if (settings.deviceRefreshInterval === 0) {
-    logger.info('Device auto-refresh disabled (manual only)');
+    console.info('Device auto-refresh disabled (manual only)');
   }
-  
+
   // Daily cleanup alarm for soft-deleted messages (always enabled)
   chrome.alarms.get(CLEANUP_ALARM_NAME, (existing) => {
     if (!existing) {
@@ -175,16 +174,16 @@ async function setupAlarms() {
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === MESSAGE_REFRESH_ALARM_NAME) {
-    logger.debug('Refresh alarm triggered');
+    console.debug('Refresh alarm triggered');
     await refreshMessages();
   } else if (alarm.name === DEVICE_REFRESH_ALARM_NAME) {
-    logger.debug('Device refresh alarm triggered');
+    console.debug('Device refresh alarm triggered');
     await refreshDevices();
   } else if (alarm.name === CLEANUP_ALARM_NAME) {
-    logger.debug('Cleanup alarm triggered');
+    console.debug('Cleanup alarm triggered');
     const purged = await purgeDeletedMessages();
     const iconsCleaned = await cleanupIconCache();
-    logger.debug(`Purged ${purged} deleted messages, ${iconsCleaned} expired icons`);
+    console.debug(`Purged ${purged} deleted messages, ${iconsCleaned} expired icons`);
   } else if (alarm.name === WEBSOCKET_KEEPALIVE_ALARM) {
     // Service worker woke up - ensure WebSocket is connected
     await ensureWebSocketConnected();
@@ -197,47 +196,47 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 async function connectWebSocket() {
   const settings = await getSettings();
-  
+
   // Only use WebSocket if instant refresh is enabled
   if (settings.refreshInterval !== -1) {
-    logger.debug('WebSocket disabled (not using instant refresh mode)');
+    console.debug('WebSocket disabled (not using instant refresh mode)');
     await disconnectWebSocket();
     return;
   }
-  
+
   const session = await getSession();
-  
+
   if (!session?.secret || !session?.deviceId) {
-    logger.debug('Not logged in, skipping WebSocket connection');
+    console.debug('Not logged in, skipping WebSocket connection');
     return;
   }
-  
+
   await disconnectWebSocket();
-  
-  logger.info('Connecting to Pushover WebSocket...');
-  
+
+  console.info('Connecting to Pushover WebSocket...');
+
   // Enable keepalive alarm to handle service worker restarts
   await setupWebSocketKeepalive(true);
-  
+
   websocket = createWebSocketConnection(session.deviceId, session.secret, {
     onOpen: async () => {
-      logger.info('WebSocket connected and logged in');
+      console.info('WebSocket connected and logged in');
     },
-    
+
     onMessage: async () => {
-      logger.debug('WebSocket: New message notification received');
+      console.debug('WebSocket: New message notification received');
       await refreshMessages();
     },
-    
+
     onReload: () => {
-      logger.info('WebSocket: Reload requested, reconnecting...');
+      console.info('WebSocket: Reload requested, reconnecting...');
       scheduleWebSocketReconnect();
     },
-    
+
     onError: async (type, message) => {
-      logger.error(`WebSocket error (${type}):`, message);
+      console.error(`WebSocket error (${type}):`, message);
       const existingError = await getErrorState();
-      
+
       if (type === 'permanent') {
         const isNewError = existingError?.type !== 'receive_auth';
         await setErrorState({
@@ -264,9 +263,9 @@ async function connectWebSocket() {
         }
       }
     },
-    
+
     onClose: (code, reason) => {
-      logger.info(`WebSocket closed: ${code} ${reason}`);
+      console.info(`WebSocket closed: ${code} ${reason}`);
       websocket = null;
       // Auto-reconnect unless it was a clean close
       if (code !== 1000) {
@@ -281,10 +280,10 @@ async function disconnectWebSocket() {
     clearTimeout(websocketReconnectTimeout);
     websocketReconnectTimeout = null;
   }
-  
+
   // Disable keepalive alarm
   await setupWebSocketKeepalive(false);
-  
+
   if (websocket) {
     websocket.close(1000);
     websocket = null;
@@ -295,8 +294,8 @@ function scheduleWebSocketReconnect() {
   if (websocketReconnectTimeout) {
     return; // Already scheduled
   }
-  
-  logger.debug(`Scheduling WebSocket reconnect in ${WEBSOCKET_RECONNECT_DELAY / 1000}s`);
+
+  console.debug(`Scheduling WebSocket reconnect in ${WEBSOCKET_RECONNECT_DELAY / 1000}s`);
   websocketReconnectTimeout = setTimeout(async () => {
     websocketReconnectTimeout = null;
     await connectWebSocket();
@@ -305,30 +304,30 @@ function scheduleWebSocketReconnect() {
 
 async function ensureWebSocketConnected() {
   const settings = await getSettings();
-  
+
   if (settings.refreshInterval !== -1) {
     return; // WebSocket mode not enabled
   }
 
-  logger.debug('Checking WebSocket status:', websocket ? websocket.readyState : 'not connected');
-  
+  console.debug('Checking WebSocket status:', websocket ? websocket.readyState : 'not connected');
+
   // If WebSocket is not connected, reconnect
   if (!websocket || (websocket.readyState !== WebSocket.OPEN && websocket.readyState !== WebSocket.CONNECTING)) {
-    logger.debug('WebSocket not connected, reconnecting...');
+    console.debug('WebSocket not connected, reconnecting...');
     await connectWebSocket();
   }
 }
 
 async function setupWebSocketKeepalive(enabled) {
   await chrome.alarms.clear(WEBSOCKET_KEEPALIVE_ALARM);
-  
+
   if (enabled) {
     // Check every 1 minute to ensure WebSocket stays connected
     // This handles service worker restarts after sleep/idle
     chrome.alarms.create(WEBSOCKET_KEEPALIVE_ALARM, {
       periodInMinutes: 1
     });
-    logger.debug('WebSocket keepalive alarm enabled');
+    console.debug('WebSocket keepalive alarm enabled');
   }
 }
 
@@ -338,11 +337,11 @@ async function setupWebSocketKeepalive(enabled) {
 
 async function buildContextMenus() {
   await chrome.contextMenus.removeAll();
-  
+
   const session = await getSession();
   const settings = await getSettings();
   const devices = await getDevices();
-  
+
   // Browser action context menu items (right-click on extension icon)
   // Only show pop-out option if alwaysPopOut is not enabled
   if (!settings.alwaysPopOut) {
@@ -364,7 +363,7 @@ async function buildContextMenus() {
       contexts: ['action']
     });
   }
-  
+
   if (settings.apiToken && settings.userKey) {
     chrome.contextMenus.create({
       id: 'refresh-devices',
@@ -378,53 +377,53 @@ async function buildContextMenus() {
     title: 'Settings',
     contexts: ['action']
   });
-  
+
   // Only show send menus if send credentials are configured
   if (!settings.apiToken || !settings.userKey) {
-    logger.debug('Send context menus not created: missing send credentials');
+    console.debug('Send context menus not created: missing send credentials');
     return;
   }
-  
+
   // Parent menu for page URL
   chrome.contextMenus.create({
     id: 'send-page',
     title: 'Pushover',
     contexts: ['page']
   });
-  
+
   // Parent menu for selected text
   chrome.contextMenus.create({
     id: 'send-selection',
     title: 'Send "%s" to Pushover',
     contexts: ['selection']
   });
-  
+
   // Parent menu for links
   chrome.contextMenus.create({
     id: 'send-link',
     title: 'Send Link to Pushover',
     contexts: ['link']
   });
-  
+
   // Parent menu for images
   chrome.contextMenus.create({
     id: 'send-image',
     title: 'Send Image to Pushover',
     contexts: ['image']
   });
-  
+
   // Add device options under each parent
   for (const parent of ['send-page', 'send-selection', 'send-link', 'send-image']) {
     const contextsMap = { 'send-selection': ['selection'], 'send-link': ['link'], 'send-image': ['image'], 'send-page': ['page'] };
     const contexts = contextsMap[parent];
-    
+
     chrome.contextMenus.create({
       id: `${parent}-all`,
       parentId: parent,
       title: 'All devices',
       contexts
     });
-    
+
     if (devices.length > 0) {
       chrome.contextMenus.create({
         id: `${parent}-separator`,
@@ -432,7 +431,7 @@ async function buildContextMenus() {
         type: 'separator',
         contexts
       });
-      
+
       for (const device of devices) {
         chrome.contextMenus.create({
           id: `${parent}-${device}`,
@@ -443,16 +442,16 @@ async function buildContextMenus() {
       }
     }
   }
-  
-  logger.debug(`Context menus created with ${devices.length} devices`);
+
+  console.debug(`Context menus created with ${devices.length} devices`);
 }
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const menuId = info.menuItemId;
-  
+
   // Handle browser action context menu items
   if (menuId === 'refresh-messages') {
-    logger.debug('Manual message refresh triggered from context menu');
+    console.debug('Manual message refresh triggered from context menu');
     await showRefreshingBadge();
     const result = await refreshMessages();
     await updateBadge();
@@ -461,9 +460,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     }
     return;
   }
-  
+
   if (menuId === 'refresh-devices') {
-    logger.debug('Manual device refresh triggered from context menu');
+    console.debug('Manual device refresh triggered from context menu');
     await showRefreshingBadge();
     const result = await refreshDevices();
     await updateBadge();
@@ -472,41 +471,41 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     }
     return;
   }
-  
+
   if (menuId === 'mark-all-read') {
-    logger.debug('Mark all as read triggered from context menu');
+    console.debug('Mark all as read triggered from context menu');
     await markAllRead();
     await clearAllMessageNotifications();
     await updateBadge();
     return;
   }
-  
+
   if (menuId === 'pop-out') {
-    logger.debug('Pop-out triggered from context menu');
+    console.debug('Pop-out triggered from context menu');
     openPageInWindow(Page.ROOT);
     return;
   }
-  
+
   if (menuId === 'open-settings') {
-    logger.debug('Settings triggered from context menu');
+    console.debug('Settings triggered from context menu');
     chrome.windows.create({ url: chrome.runtime.getURL('src/pages/settings.html'), type: 'popup' });
     return;
   }
-  
+
   const settings = await getSettings();
-  
+
   // Parse menu ID: "send-{type}-{device}"
   const match = String(menuId).match(/^send-(page|selection|link|image)-(.+)$/);
   if (!match) return;
-  
+
   const [, type, device] = match;
-  
+
   const params = {
     token: settings.apiToken,
     user: settings.userKey,
     device: device === 'all' ? undefined : device
   };
-  
+
   switch (type) {
     case 'page':
       params.message = tab.title || info.pageUrl;
@@ -534,7 +533,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       params.message = info.selectionText;
       break;
   }
-  
+
   await handleSendMessage(params);
 });
 
@@ -544,63 +543,63 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
 async function refreshMessages(options = {}) {
   const { skipNotifications = false, checkDebounce = false } = options;
-  
+
   // Debounce check (only when checkDebounce is true, i.e., popup auto-refresh)
   if (checkDebounce) {
     const now = Date.now();
     if ((now - lastRefreshTime) < DEBOUNCE_MS) {
-      logger.debug('Refresh debounced');
+      console.debug('Refresh debounced');
       return { debounced: true };
     }
   }
-  
+
   const session = await getSession();
-  
+
   if (!session?.secret || !session?.deviceId) {
-    logger.debug('Not logged in, skipping refresh');
+    console.debug('Not logged in, skipping refresh');
     return { error: 'not_logged_in' };
   }
-  
+
   try {
     const messages = await fetchMessages(session.secret, session.deviceId);
     lastRefreshTime = Date.now();
-    
+
     // Clear any previous receive errors on successful fetch
     await clearErrorState('receive');
-    
+
     let newCount = 0;
     if (messages.length > 0) {
       newCount = await appendMessages(messages);
-      
+
       // Delete messages from server after caching locally
       const highestId = Math.max(...messages.map(m => m.id));
       await deleteMessages(session.secret, session.deviceId, highestId);
-      
-      logger.debug(`Fetched ${messages.length} messages, ${newCount} new`);
-      
+
+      console.debug(`Fetched ${messages.length} messages, ${newCount} new`);
+
       // Show notifications for new messages
       if (newCount > 0 && !skipNotifications) {
         await showNotificationsForNewMessages(newCount);
       }
-      
+
       // Notify any open popup to refresh display
       if (newCount > 0) {
         notifyPopupOfNewMessages();
       }
     }
-    
+
     // Update badge
     if (!skipNotifications) {
       await updateBadge();
     }
-    
+
     return { success: true, newCount };
   } catch (error) {
-    logger.error('Failed to refresh messages:', error);
-    
+    console.error('Failed to refresh messages:', error);
+
     // Handle different error types - only show OS notification if this is a new error
     const existingError = await getErrorState();
-    
+
     if (error.errorType === ERROR_TYPES.AUTH) {
       const isNewError = existingError?.type !== 'receive_auth';
       await setErrorState({
@@ -625,12 +624,12 @@ async function refreshMessages(options = {}) {
       }
     } else if (error.errorType === ERROR_TYPES.SERVER || error.errorType === ERROR_TYPES.NETWORK) {
       // Transient errors - don't set persistent error state, just log
-      logger.warn('Temporary error, will retry on next refresh:', error.message);
+      console.warn('Temporary error, will retry on next refresh:', error.message);
     }
-    
+
     // Always update badge to reflect any error state
     await updateBadge();
-    
+
     return { error: error.message, errorType: error.errorType };
   }
 }
@@ -655,12 +654,12 @@ async function showRefreshingBadge() {
 
 async function updateBadge() {
   const settings = await getSettings();
-  
+
   if (!settings.badgeEnabled) {
     await chrome.action.setBadgeText({ text: '' });
     return;
   }
-  
+
   // Check for non-recoverable errors that require user action (auth/device issues)
   // Transient errors (network, server) don't show warning badge - we'll retry automatically
   const errorState = await getErrorState();
@@ -669,12 +668,12 @@ async function updateBadge() {
     await chrome.action.setBadgeBackgroundColor({ color: '#FF9800' }); // Orange for warning
     return;
   }
-  
+
   const count = await getUnreadCount();
-  
+
   if (count > 0) {
-    await chrome.action.setBadgeText({ 
-      text: count > 99 ? '99+' : String(count) 
+    await chrome.action.setBadgeText({
+      text: count > 99 ? '99+' : String(count)
     });
     await chrome.action.setBadgeBackgroundColor({ color: '#E53935' }); // Red for unread
   } else {
@@ -688,15 +687,15 @@ async function updateBadge() {
 
 async function showNotificationsForNewMessages(newCount) {
   const settings = await getSettings();
-  
+
   if (!settings.notificationsEnabled) {
     return;
   }
-  
+
   // Get the newest unseen messages
   const messages = await getVisibleMessages();
   const unseenMessages = messages.filter(m => !m._seen).slice(0, newCount);
-  
+
   for (const message of unseenMessages) {
     await showNotification(message);
   }
@@ -705,10 +704,10 @@ async function showNotificationsForNewMessages(newCount) {
 async function showNotification(message) {
   const notificationId = `pushover-msg-${message.id}`;
   const fallbackIcon = chrome.runtime.getURL('src/icons/icon-128.png');
-  
+
   // Pre-cache icon for notification (ensures it's available offline too)
   const iconUrl = await getCachedIconUrl(message.icon) || fallbackIcon;
-  
+
   const options = {
     type: 'basic',
     title: message.title || message.app || 'Pushover',
@@ -717,13 +716,13 @@ async function showNotification(message) {
     priority: getPriorityForNotification(message.priority),
     requireInteraction: message.priority >= 2 // Emergency messages stay visible
   };
-  
+
   // max 2 buttons
   options.buttons = [
     { title: 'Dismiss' },
     { title: 'Copy' }
   ];
-  
+
   try {
     await chrome.notifications.create(notificationId, options);
   } catch (error) {
@@ -746,16 +745,16 @@ function getPriorityForNotification(pushoverPriority) {
 chrome.notifications.onClicked.addListener(async (notificationId) => {
   if (notificationId.startsWith('pushover-msg-')) {
     const messageId = parseInt(notificationId.replace('pushover-msg-', ''), 10);
-    
+
     // Find message to check for URL
     const messages = await getMessages();
     const message = messages.find(m => m.id === messageId);
-    
+
     // Open URL if present (in new tab, not window)
     if (message?.url) {
       openUrlInTab(message.url);
     }
-    
+
     // Mark as read and dismiss
     await markMessageAsReadFromNotification(notificationId);
     chrome.notifications.clear(notificationId);
@@ -771,13 +770,13 @@ chrome.notifications.onClosed.addListener(async (notificationId, byUser) => {
 
 async function markMessageAsReadFromNotification(notificationId) {
   const messageId = parseInt(notificationId.replace('pushover-msg-', ''), 10);
-  
+
   // Get messages and mark this specific one as read
   const messages = await getMessages();
-  const updated = messages.map(m => 
+  const updated = messages.map(m =>
     m.id === messageId ? { ...m, _seen: true } : m
   );
-  
+
   await saveMessages(updated);
   await updateBadge();
 }
@@ -785,19 +784,19 @@ async function markMessageAsReadFromNotification(notificationId) {
 // Handle notification button clicks
 chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
   if (!notificationId.startsWith('pushover-msg-')) return;
-  logger.debug('Notification clicked:', notificationId, ', Button index:', buttonIndex);
-  
+  console.debug('Notification clicked:', notificationId, ', Button index:', buttonIndex);
+
   const messageId = parseInt(notificationId.replace('pushover-msg-', ''), 10);
   const messages = await getVisibleMessages();
   const message = messages.find(m => m.id === messageId);
   if (!message) return;
-  
+
   const isEmergency = message.priority === 2 && message.acked === 0 && message.receipt;
-  
+
   switch (buttonIndex) {
     case 0:
       if (isEmergency) {
-        await handleAcknowledgeEmergency(notificationId, message);
+        await handleAcknowledgeEmergency(message.receipt, message.id);
       } else {
         await markMessageAsReadFromNotification(notificationId);
         chrome.notifications.clear(notificationId);
@@ -811,25 +810,42 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
   }
 });
 
-async function handleAcknowledgeEmergency(notificationId, message) {
+async function handleAcknowledgeEmergency(receipt, messageId) {
   const session = await getSession();
-  if (!session?.secret) return;
-  
+  if (!session?.secret) {
+    return { success: false, error: 'Not logged in' };
+  }
+
   try {
-    await acknowledgeEmergency(session.secret, message.receipt);
-    markMessageAsReadFromNotification(notificationId);
-    chrome.notifications.clear(notificationId);
+    await acknowledgeEmergency(session.secret, receipt);
+
+    // Update message in storage to mark as acknowledged
+    const messages = await getMessages();
+    const updated = messages.map(m =>
+      m.receipt === receipt ? { ...m, acked: 1 } : m
+    );
+    await saveMessages(updated);
+
+    // Mark as read and clear notification if present
+    if (messageId) {
+      const notificationId = `pushover-msg-${messageId}`;
+      await markMessageAsReadFromNotification(notificationId);
+      chrome.notifications.clear(notificationId);
+    }
+
+    return { success: true };
   } catch (error) {
-    logger.error('Failed to acknowledge emergency:', error);
+    console.error('Failed to acknowledge emergency:', error);
+    return { success: false, error: error.message };
   }
 }
 
 async function handleCopyToClipboard(text) {
   // Use offscreen document API for clipboard access in service worker
-  logger.info('Copying text to clipboard:', text);
+  console.info('Copying text to clipboard:', text);
   await createOffscreenDocument();
   const result = await chrome.runtime.sendMessage({ action: 'copyToClipboard', text: text });
-  logger.info('Offscreen document copy result:', result?.success);
+  console.info('Offscreen document copy result:', result?.success);
   await closeOffscreenDocument();
 }
 
@@ -842,14 +858,14 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area === 'local' && changes.messages) {
     await updateBadge();
   }
-  
+
   // Update badge when error state changes
   if (area === 'local' && changes.errorState) {
     await updateBadge();
     // Notify popup/pages of error state change
-    chrome.runtime.sendMessage({ action: 'errorStateChanged' }).catch(() => {});
+    chrome.runtime.sendMessage({ action: 'errorStateChanged' }).catch(() => { });
   }
-  
+
   // Reconfigure alarms and WebSocket when settings change
   if (area === 'local' && changes.settings) {
     const newSettings = changes.settings.newValue;
@@ -859,7 +875,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
     // Rebuild context menus if credentials changed
     await buildContextMenus();
   }
-  
+
   // Set up alarms and WebSocket when user logs in/out
   if (area === 'local' && changes.session) {
     await setupAlarms();
@@ -874,7 +890,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
     }
     await updateBadge();
   }
-  
+
   // Rebuild context menus when devices change
   if (area === 'local' && changes.devices) {
     await buildContextMenus();
@@ -898,37 +914,44 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true; // Keep channel open for async response
   }
-  
+
   if (request.action === 'updateBadge') {
     updateBadge().then(() => {
       sendResponse({ success: true });
     });
     return true;
   }
-  
+
   if (request.action === 'clearNotifications') {
     clearAllMessageNotifications().then(() => {
       sendResponse({ success: true });
     });
     return true;
   }
-  
+
   if (request.action === 'sendMessage') {
     handleSendMessage(request.params).then((result) => {
       sendResponse(result);
     });
     return true;
   }
-  
+
   if (request.action === 'rebuildContextMenus') {
     buildContextMenus().then(() => {
       sendResponse({ success: true });
     });
     return true;
   }
-  
+
   if (request.action === 'refreshDevices') {
     refreshDevices().then((result) => {
+      sendResponse(result);
+    });
+    return true;
+  }
+
+  if (request.action === 'acknowledgeEmergency') {
+    handleAcknowledgeEmergency(request.receipt, request.messageId).then((result) => {
       sendResponse(result);
     });
     return true;
@@ -942,21 +965,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function refreshDevices() {
   try {
     const settings = await getSettings();
-    
+
     if (!settings.apiToken || !settings.userKey) {
       return { success: false, error: 'Send credentials not configured' };
     }
-    
+
     const result = await validateCredentials(settings.apiToken, settings.userKey);
-    
+
     if (!result.valid) {
       return { success: false, error: 'Invalid credentials' };
     }
-    
+
     await saveDevices(result.devices);
     return { success: true, devices: result.devices };
   } catch (error) {
-    logger.error('Failed to refresh devices:', error);
+    console.error('Failed to refresh devices:', error);
     return { success: false, error: error.message };
   }
 }
@@ -977,7 +1000,7 @@ async function trySendMessage(params) {
     await clearErrorState('send');
     return { success: true, ...result };
   } catch (error) {
-    logger.error('Send message failed:', error);
+    console.error('Send message failed:', error);
     await handleSendError(error);
     return { success: false, error: error.message, errorType: error.errorType };
   }
@@ -999,12 +1022,12 @@ async function handleSendError(error) {
 
 async function notifySendResult(result, device) {
   if (await isSendPageOpen()) return;
-  
+
   if (result.success) {
     showToastNotification('Message Sent', `Sent to ${device || 'all devices'}`);
     return;
   }
-  
+
   switch (result.errorType) {
     case ERROR_TYPES.VALIDATION:
     case ERROR_TYPES.AUTH:
@@ -1031,7 +1054,7 @@ async function isSendPageOpen() {
 
 function showToastNotification(title, message) {
   const notificationId = `pushover-toast-${Date.now()}`;
-  
+
   chrome.notifications.create(notificationId, {
     type: 'basic',
     iconUrl: chrome.runtime.getURL('src/icons/icon-128.png'),
@@ -1039,7 +1062,7 @@ function showToastNotification(title, message) {
     message: message,
     priority: 0
   });
-  
+
   // Auto-dismiss after 5 seconds
   setTimeout(() => {
     chrome.notifications.clear(notificationId);
@@ -1048,10 +1071,10 @@ function showToastNotification(title, message) {
 
 function showCriticalErrorNotification(type, message) {
   const notificationId = `pushover-error-${type}`;
-  
+
   // Clear any existing error notification of this type first
   chrome.notifications.clear(notificationId);
-  
+
   chrome.notifications.create(notificationId, {
     type: 'basic',
     iconUrl: chrome.runtime.getURL('src/icons/icon-128.png'),
@@ -1068,7 +1091,7 @@ function showCriticalErrorNotification(type, message) {
 
 async function clearAllMessageNotifications() {
   const notifications = await chrome.notifications.getAll();
-  
+
   for (const notificationId of Object.keys(notifications)) {
     if (notificationId.startsWith('pushover-msg-')) {
       await chrome.notifications.clear(notificationId);
@@ -1076,4 +1099,4 @@ async function clearAllMessageNotifications() {
   }
 }
 
-logger.info('Service worker loaded');
+console.info('Service worker loaded');
