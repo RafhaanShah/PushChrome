@@ -972,6 +972,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
   }
+
+  if (request.action === 'validateCredentials') {
+    validateCredentials(request.apiToken, request.userKey).then((result) => {
+      sendResponse(result);
+    }).catch((error) => {
+      sendResponse({ valid: false, error: error.message });
+    });
+    return true;
+  }
 });
 
 // =============================================================================

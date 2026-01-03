@@ -1,5 +1,4 @@
 // Pushover Chrome Extension - Settings Page
-import { validateCredentials } from '../lib/api.js';
 import { getSession, getSettings, saveSettings, saveDevices, clearAll, applyMessageLimit } from '../lib/storage.js';
 import { $ } from '../lib/utils.js';
 import { Page, navigateTo, initWindowMode } from '../lib/navigation.js';
@@ -122,10 +121,18 @@ async function handleValidate() {
   hideValidateResult();
 
   try {
-    const result = await validateCredentials(token, user);
+    const result = await chrome.runtime.sendMessage({
+      action: 'validateCredentials',
+      apiToken: token,
+      userKey: user
+    });
 
     if (result.valid) {
-      // Save devices for later use in send message
+      // Save credentials and devices when validation succeeds
+      await saveSettings({
+        apiToken: token,
+        userKey: user
+      });
       if (result.devices.length > 0) {
         await saveDevices(result.devices);
       }
@@ -179,6 +186,9 @@ async function handleSave() {
     } catch (e) {
       console.error('Could not update alarm:', e);
     }
+
+    // Kick off a device refresh
+    chrome.runtime.sendMessage({ action: 'refreshDevices' }).catch(() => { });
 
     showSaveSuccess();
   } catch (error) {
