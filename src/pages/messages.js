@@ -28,7 +28,7 @@ async function init() {
     currentPage: Page.MESSAGES,
     pageActions: [
       { id: 'refresh-btn', icon: ICONS.refresh, title: 'Refresh messages', onClick: () => refreshMessages(false) },
-      { id: 'mark-read-btn', icon: ICONS.markRead, title: 'Mark all as read', onClick: handleMarkAllRead, hidden: true },
+      { id: 'mark-read-btn', icon: ICONS.markRead, title: 'Mark all as read', onClick: handleMarkAllRead },
     ],
   });
 
@@ -72,14 +72,10 @@ function setupEventListeners() {
 }
 
 function setupMessageListener() {
-  // Listen for updates from service worker when new messages arrive
   chrome.runtime.onMessage.addListener((request) => {
     if (request.action === 'messagesUpdated') {
       console.debug('Received messagesUpdated event');
-      // Reload and display messages, preserving scroll position
-      loadAndDisplayMessages(true).then(() => {
-        updateMarkReadButton();
-      });
+      reloadMessageDisplay(true);
     }
 
     if (request.action === 'errorStateChanged') {
@@ -87,6 +83,20 @@ function setupMessageListener() {
       checkErrorState();
     }
   });
+}
+
+async function reloadMessageDisplay(maintainScrollPosition = false) {
+  await loadAndDisplayMessages(maintainScrollPosition);
+
+  if (settings?.markAsReadOnOpen) {
+    await storage.markAllRead();
+    await updateBadge();
+    try {
+      await chrome.runtime.sendMessage({ action: 'clearNotifications' });
+    } catch (e) {
+      // Service worker may not be ready, ignore
+    }
+  }
 }
 
 async function checkAuthAndLoadMessages() {
@@ -116,13 +126,15 @@ async function checkAuthAndLoadMessages() {
     }
   }
 
-  // Show/hide mark as read button based on setting
-  updateMarkReadButton();
-
-  // Conditionally mark as read on open
+  // Mark as read on open if enabled
   if (settings.markAsReadOnOpen) {
-    await markMessagesAsRead();
+    await storage.markAllRead();
     await updateBadge();
+    try {
+      await chrome.runtime.sendMessage({ action: 'clearNotifications' });
+    } catch (e) {
+      // Service worker may not be ready, ignore
+    }
   }
 
   // Auto-refresh on popup open (debounced - only if last refresh > 1 min ago)
@@ -152,7 +164,30 @@ function showMessages() {
   $('#search-bar').classList.remove('hidden');
 }
 
-async function loadAndDisplayMessages(preserveScroll = false) {
+async function loadAndDisplayMessages(maintainScrollPosition = false) {
+  const container = $('#message-list');
+  
+  // Capture scroll state before reload if we need to maintain position
+  let scrollAnchor = null;
+  if (maintainScrollPosition && container.children.length > 0) {
+    const scrollY = window.scrollY;
+    // Find the first message element that's visible in the viewport
+    for (const child of container.children) {
+      const rect = child.getBoundingClientRect();
+      if (rect.top >= 0) {
+        scrollAnchor = {
+          id: child.dataset.id,
+          offsetFromTop: rect.top,
+        };
+        break;
+      }
+    }
+    // If scrolled to very top, don't anchor - let new messages appear naturally
+    if (scrollY < 10) {
+      scrollAnchor = null;
+    }
+  }
+
   loadedMessagesCount = 0;
   hasMoreMessages = true;
 
@@ -160,13 +195,13 @@ async function loadAndDisplayMessages(preserveScroll = false) {
 
   if (totalCount === 0) {
     showMessages();
-    $('#message-list').classList.add('hidden');
+    container.classList.add('hidden');
     $('#empty-messages').classList.remove('hidden');
     return;
   }
 
   showMessages();
-  $('#message-list').classList.remove('hidden');
+  container.classList.remove('hidden');
   $('#empty-messages').classList.add('hidden');
 
   const existingIndicator = $('#load-more-indicator');
@@ -174,7 +209,7 @@ async function loadAndDisplayMessages(preserveScroll = false) {
 
   let initialLoadCount = PAGE_SIZE;
 
-  if (!hadUnreadOnOpen) {
+  if (!hadUnreadOnOpen && !maintainScrollPosition) {
     const savedPosition = await storage.getScrollPosition();
     if (savedPosition > 0) {
       const estimatedRowHeight = 120;
@@ -183,7 +218,17 @@ async function loadAndDisplayMessages(preserveScroll = false) {
     }
   }
 
-  await loadMoreMessages(initialLoadCount, !preserveScroll);
+  await loadMoreMessages(initialLoadCount, true);
+
+  // Restore scroll position to keep the same message visible
+  if (scrollAnchor) {
+    const anchorEl = container.querySelector(`[data-id="${scrollAnchor.id}"]`);
+    if (anchorEl) {
+      const newRect = anchorEl.getBoundingClientRect();
+      const scrollAdjustment = newRect.top - scrollAnchor.offsetFromTop;
+      window.scrollBy(0, scrollAdjustment);
+    }
+  }
 }
 
 async function loadMoreMessages(count = PAGE_SIZE, isInitialLoad = false) {
@@ -288,9 +333,14 @@ function createMessageElement(msg, isUnread) {
     ? `<a href="${escapeHtml(msg.url)}" class="message-link" target="_blank" rel="noopener">${escapeHtml(msg.url_title || 'Open Link')}</a>`
     : '';
 
-  const emergencyHtml = msg.priority === 2 && msg.acked === 0 && msg.receipt
-    ? `<button class="btn btn-ack" data-receipt="${escapeHtml(msg.receipt)}">Acknowledge</button>`
-    : '';
+  let emergencyHtml = '';
+  if (msg.priority === 2 && msg.receipt) {
+    if (msg.acked === 1) {
+      emergencyHtml = `<button class="btn btn-ack acknowledged" disabled>Acknowledged</button>`;
+    } else if (msg.acked === 0) {
+      emergencyHtml = `<button class="btn btn-ack" data-receipt="${escapeHtml(msg.receipt)}">Acknowledge</button>`;
+    }
+  }
 
   div.innerHTML = `
     <div class="message-header">
@@ -298,7 +348,6 @@ function createMessageElement(msg, isUnread) {
       <span class="message-app">${escapeHtml(msg.app || '')}</span>
       <div class="message-time-container">
         <div class="message-time" title="${new Date(msg.date * 1000).toLocaleString()}">${timeText}</div>
-        ${isUnread ? '<div class="unread-indicator"></div>' : ''}
       </div>
       <button class="message-copy" title="Copy message">📋</button>
       <button class="message-delete" title="Delete message">🗑️</button>
@@ -424,14 +473,7 @@ async function refreshMessages(checkDebounce = false) {
       return;
     }
 
-    // Reload display after refresh
-    await loadAndDisplayMessages();
-    updateMarkReadButton();
-
-    if (settings.markAsReadOnOpen) {
-      await markMessagesAsRead();
-      await updateBadge();
-    }
+    await reloadMessageDisplay(false);
 
   } catch (err) {
     console.error('Refresh error:', err);
@@ -457,36 +499,18 @@ function setRefreshingState(refreshing) {
   }
 }
 
-async function markMessagesAsRead() {
+async function handleMarkAllRead() {
+  console.debug('Mark all read clicked');
   await storage.markAllRead();
-
-  // Clear notifications from OS tray since user has seen them
+  await updateBadge();
+  
   try {
     await chrome.runtime.sendMessage({ action: 'clearNotifications' });
   } catch (e) {
     // Service worker may not be ready, ignore
   }
 
-  // Re-render to remove unread indicators
   await loadAndDisplayMessages();
-  updateMarkReadButton();
-}
-
-async function handleMarkAllRead() {
-  console.debug('Mark all read clicked');
-  await markMessagesAsRead();
-  await updateBadge();
-}
-
-function updateMarkReadButton() {
-  // Show if there are any unread messages
-  storage.getUnreadCount().then(count => {
-    if (count > 0) {
-      headerController?.showButton('mark-read-btn');
-    } else {
-      headerController?.hideButton('mark-read-btn');
-    }
-  });
 }
 
 async function updateBadge() {

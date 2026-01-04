@@ -126,7 +126,7 @@ export async function ensureWebSocketConnected(onMessageCallback) {
     return; // Not using WebSocket mode
   }
 
-  console.debug('Ensuring WebSocket is connected...');
+  // console.debug('Ensuring WebSocket is connected...');
   if (!websocket || (websocket.readyState !== WebSocket.OPEN && websocket.readyState !== WebSocket.CONNECTING)) {
     console.debug('WebSocket not connected, reconnecting...');
     await connectWebSocket(onMessageCallback);
