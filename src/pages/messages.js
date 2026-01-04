@@ -15,6 +15,7 @@ const PAGE_SIZE = 50;
 let loadedMessagesCount = 0;
 let hasMoreMessages = true;
 let isLoadingMore = false;
+let currentSearchTerm = '';
 
 async function init() {
   console.info('Messages page initialized');
@@ -43,20 +44,28 @@ function setupEventListeners() {
   $('#error-banner-action')?.addEventListener('click', handleErrorAction);
   $('#error-banner-dismiss')?.addEventListener('click', dismissErrorBanner);
 
-  // Save scroll position on page unload/visibility change
+  // Search bar
+  $('#search-input')?.addEventListener('input', debounce(handleSearchInput, 200));
+  $('#search-clear')?.addEventListener('click', clearSearch);
+
+  // Save scroll position on page unload/visibility change (only when not searching)
   window.addEventListener('scroll', debounce(() => {
-    storage.saveScrollPosition(window.scrollY);
+    if (!currentSearchTerm) {
+      storage.saveScrollPosition(window.scrollY);
+    }
     checkInfiniteScroll();
   }, 100));
 
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
+    if (document.visibilityState === 'hidden' && !currentSearchTerm) {
       storage.saveScrollPosition(window.scrollY);
     }
   });
 
   window.addEventListener('beforeunload', () => {
-    storage.saveScrollPosition(window.scrollY);
+    if (!currentSearchTerm) {
+      storage.saveScrollPosition(window.scrollY);
+    }
   });
 }
 
@@ -138,6 +147,7 @@ function showMessages() {
   $('#login-prompt').classList.add('hidden');
   $('#error-state').classList.add('hidden');
   $('#messages-container').classList.remove('hidden');
+  $('#search-bar').classList.remove('hidden');
 }
 
 async function loadAndDisplayMessages(preserveScroll = false) {
@@ -223,7 +233,22 @@ function checkInfiniteScroll() {
   const documentHeight = document.documentElement.scrollHeight;
 
   if (scrollY + windowHeight >= documentHeight - 300) {
-    loadMoreMessages();
+    if (currentSearchTerm) {
+      loadMoreSearchResults();
+    } else {
+      loadMoreMessages();
+    }
+  }
+}
+
+async function loadMoreSearchResults() {
+  if (isLoadingMore || !hasMoreMessages || !currentSearchTerm) return;
+  
+  isLoadingMore = true;
+  try {
+    await displayFilteredMessages(currentSearchTerm, true);
+  } finally {
+    isLoadingMore = false;
   }
 }
 
@@ -489,6 +514,85 @@ function showStatus(message, isError = false) {
   setTimeout(() => {
     statusBar.classList.add('hidden');
   }, 3000);
+}
+
+// =============================================================================
+// Search Functionality
+// =============================================================================
+
+function handleSearchInput(event) {
+  const searchTerm = event.target.value.trim().toLowerCase();
+  currentSearchTerm = searchTerm;
+  
+  const clearBtn = $('#search-clear');
+  if (searchTerm) {
+    clearBtn.classList.remove('hidden');
+    storage.saveScrollPosition(0);
+  } else {
+    clearBtn.classList.add('hidden');
+  }
+  
+  displayFilteredMessages(searchTerm);
+}
+
+function clearSearch() {
+  const input = $('#search-input');
+  input.value = '';
+  currentSearchTerm = '';
+  $('#search-clear').classList.add('hidden');
+  displayFilteredMessages('');
+}
+
+async function displayFilteredMessages(searchTerm, append = false) {
+  const container = $('#message-list');
+  const noResults = $('#no-results');
+  
+  if (!searchTerm) {
+    noResults?.remove();
+    await loadAndDisplayMessages();
+    return;
+  }
+  
+  if (!append) {
+    loadedMessagesCount = 0;
+    hasMoreMessages = true;
+  }
+  
+  const result = await storage.searchMessages(searchTerm, PAGE_SIZE, loadedMessagesCount);
+  
+  let noResultsEl = $('#no-results');
+  if (result.messages.length === 0 && loadedMessagesCount === 0) {
+    container.innerHTML = '';
+    if (!noResultsEl) {
+      noResultsEl = document.createElement('div');
+      noResultsEl.id = 'no-results';
+      noResultsEl.className = 'no-results';
+      container.after(noResultsEl);
+    }
+    noResultsEl.textContent = `No messages matching "${searchTerm}"`;
+    noResultsEl.classList.remove('hidden');
+    $('#empty-messages').classList.add('hidden');
+    hasMoreMessages = false;
+    updateLoadingIndicator();
+  } else {
+    noResultsEl?.remove();
+    
+    // Build content off-screen and swap atomically to avoid flicker
+    const fragment = document.createDocumentFragment();
+    for (const msg of result.messages) {
+      const messageEl = createMessageElement(msg, !msg._seen);
+      fragment.appendChild(messageEl);
+    }
+    
+    if (!append) {
+      container.innerHTML = '';
+    }
+    container.appendChild(fragment);
+    
+    loadedMessagesCount += result.messages.length;
+    hasMoreMessages = result.hasMore;
+    updateLoadingIndicator();
+  }
 }
 
 // =============================================================================

@@ -98,6 +98,52 @@ export async function getVisibleMessagesCount() {
   return messages.filter(m => !m._deletedAt).length;
 }
 
+export async function searchMessages(searchTerm, limit = 50, offset = 0) {
+  if (!searchTerm) return { messages: [], hasMore: false };
+  
+  const term = searchTerm.toLowerCase();
+  const db = await openDatabase();
+  const tx = db.transaction(MESSAGES_STORE, 'readonly');
+  const store = tx.objectStore(MESSAGES_STORE);
+  const index = store.index('by_date');
+  
+  return new Promise((resolve, reject) => {
+    const results = [];
+    let skipped = 0;
+    let collected = 0;
+    let hasMore = false;
+    const request = index.openCursor(null, 'prev');
+    
+    request.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        const msg = cursor.value;
+        if (!msg._deletedAt) {
+          const title = (msg.title || '').toLowerCase();
+          const body = (msg.message || '').toLowerCase();
+          if (title.includes(term) || body.includes(term)) {
+            if (skipped < offset) {
+              skipped++;
+            } else if (collected < limit) {
+              results.push(msg);
+              collected++;
+            } else {
+              hasMore = true;
+              resolve({ messages: results, hasMore });
+              return;
+            }
+          }
+        }
+        cursor.continue();
+      } else {
+        resolve({ messages: results, hasMore });
+      }
+    };
+    
+    request.onerror = () => reject(request.error);
+  });
+}
+
 export async function saveMessages(messages) {
   const db = await openDatabase();
   const tx = db.transaction(MESSAGES_STORE, 'readwrite');
