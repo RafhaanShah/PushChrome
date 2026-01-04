@@ -1033,8 +1033,10 @@ async function handleSendMessage(params) {
 
 async function trySendMessage(params) {
   try {
+    console.debug('Sending message:', params.message);
     const result = await sendMessage(params);
     await clearErrorState('send');
+    console.debug('Message sent, success:', result.success);
     return { success: true, ...result };
   } catch (error) {
     console.error('Send message failed:', error);

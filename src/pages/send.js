@@ -1,7 +1,7 @@
 // Pushover Chrome Extension - Send Message Page
 import { getSettings, getDevices, getSendPreferences, saveSendPreferences } from '../lib/storage.js';
 import { $, createElement } from '../lib/utils.js';
-import { initWindowMode } from '../lib/navigation.js';
+import { initWindowMode, isPopupMode, openPageInWindow } from '../lib/navigation.js';
 import { initHeader, Page } from '../lib/header.js';
 
 const elements = {
@@ -135,7 +135,7 @@ function bindEvents() {
 }
 
 function handlePriorityChange() {
-  console.debug('Priority changed', { priority: elements.priority.value });
+  console.debug('Priority changed', elements.priority.value);
   const isEmergency = elements.priority.value === '2';
   elements.emergencyOptions.classList.toggle('hidden', !isEmergency);
 }
@@ -176,6 +176,14 @@ async function handleRefreshDevices() {
 }
 
 function handleAttachmentClick() {
+  console.debug('Attachment button clicked');
+  if (isPopupMode()) {
+    console.debug('Opening send page in window mode for attachment');
+    openPageInWindow(Page.SEND);
+    window.close();
+    return;
+  }
+  
   elements.attachment.click();
 }
 
