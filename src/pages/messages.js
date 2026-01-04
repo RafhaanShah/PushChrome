@@ -157,9 +157,6 @@ async function loadAndDisplayMessages(preserveScroll = false) {
   $('#message-list').classList.remove('hidden');
   $('#empty-messages').classList.add('hidden');
 
-  const container = $('#message-list');
-  container.innerHTML = '';
-
   const existingIndicator = $('#load-more-indicator');
   if (existingIndicator) existingIndicator.remove();
 
@@ -191,9 +188,22 @@ async function loadMoreMessages(count = PAGE_SIZE, isInitialLoad = false) {
     }
 
     const container = $('#message-list');
-    for (const msg of result.messages) {
-      const messageEl = createMessageElement(msg, !msg._seen);
-      container.appendChild(messageEl);
+
+    // On initial load, build new content off-screen and swap atomically to avoid flicker
+    if (isInitialLoad) {
+      const fragment = document.createDocumentFragment();
+      for (const msg of result.messages) {
+        const messageEl = createMessageElement(msg, !msg._seen);
+        fragment.appendChild(messageEl);
+      }
+      container.innerHTML = '';
+      container.appendChild(fragment);
+    } else {
+      // Appending more messages (infinite scroll) - just append
+      for (const msg of result.messages) {
+        const messageEl = createMessageElement(msg, !msg._seen);
+        container.appendChild(messageEl);
+      }
     }
 
     loadedMessagesCount += result.messages.length;

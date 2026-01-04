@@ -3,8 +3,8 @@ import { $, createElement } from './utils.js';
 import { Page, navigateTo, isPopupMode, openPageInWindow } from './navigation.js';
 
 const ICONS = {
-  messages: '📬',
-  send: '📤',
+  messages: '📩',
+  send: '📝',
   settings: '⚙️',
   refresh: '<span class="icon-refresh">🔄</span>',
   popout: '↗️',
