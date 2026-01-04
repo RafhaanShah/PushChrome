@@ -159,7 +159,7 @@ async function handleRefreshDevices() {
       const currentValue = elements.device.value;
 
       // Clear and repopulate device list
-      elements.device.innerHTML = '<option value="">All devices</option>';
+      elements.device.innerHTML = '<option value="">All Devices</option>';
       result.devices.forEach(device => {
         elements.device.appendChild(createElement('option', { value: device, textContent: device }));
       });

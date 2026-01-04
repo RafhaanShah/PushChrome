@@ -355,8 +355,10 @@ export function createWebSocketConnection(deviceId, secret, handlers = {}) {
 
   ws.onmessage = async (event) => {
     const data = event.data instanceof Blob ? await event.data.text() : event.data;
+    // console.log('WebSocket: message received:', data);
 
     if (data === '#') {
+      // keep-alive, expected every 30s
       return;
     }
 
@@ -382,7 +384,7 @@ export function createWebSocketConnection(deviceId, secret, handlers = {}) {
   };
 
   ws.onerror = (error) => {
-    onError?.('connection', 'WebSocket connection error: ' + error);
+    onError?.('connection', 'WebSocket connection error');
   };
 
   ws.onclose = (event) => {
