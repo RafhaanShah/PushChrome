@@ -3,6 +3,7 @@ import { getSettings, getDevices, getSendPreferences, saveSendPreferences } from
 import { $, createElement } from '../lib/utils.js';
 import { initWindowMode, isPopupMode, openPageInWindow } from '../lib/navigation.js';
 import { initHeader, Page } from '../lib/header.js';
+import { initTheme } from '../lib/theme.js';
 
 const elements = {
   credentialsWarning: null,
@@ -47,6 +48,7 @@ let settings = null;
 
 async function init() {
   console.info('Send page initialized');
+  await initTheme();
   await initWindowMode(Page.SEND);
   initHeader({
     title: 'Send Message',

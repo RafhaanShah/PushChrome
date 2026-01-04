@@ -14,13 +14,13 @@
 .login-header h1 {
   font-size: 24px;
   font-weight: 600;
-  color: #249df1;
+  color: var(--color-primary);
   margin-bottom: 4px;
 }
 
 .login-header .subtitle {
   font-size: 14px;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .login-form {
@@ -43,7 +43,7 @@
 }
 
 .login-form .banner a {
-  color: #dc2626;
+  color: var(--color-error-text);
   font-weight: 500;
 }
 
@@ -51,7 +51,7 @@
 .login-footer {
   text-align: center;
   font-size: 13px;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .login-footer p {

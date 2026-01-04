@@ -3,6 +3,7 @@ import { getSession, getSettings, saveSettings, saveDevices, clearAll, applyMess
 import { $ } from '../lib/utils.js';
 import { Page, navigateTo, initWindowMode } from '../lib/navigation.js';
 import { initHeader } from '../lib/header.js';
+import { initTheme, applyTheme } from '../lib/theme.js';
 
 let isLoggedIn = false;
 
@@ -25,11 +26,13 @@ const elements = {
   badgeEnabled: null,
   markAsReadOnOpen: null,
   alwaysPopOut: null,
+  darkMode: null,
   saveBtn: null
 };
 
 async function init() {
   console.info('Settings page initialized');
+  await initTheme();
   await initWindowMode(Page.SETTINGS);
   initHeader({
     title: 'Settings',
@@ -54,6 +57,7 @@ async function init() {
   elements.badgeEnabled = $('#badge-enabled');
   elements.markAsReadOnOpen = $('#mark-as-read-on-open');
   elements.alwaysPopOut = $('#always-pop-out');
+  elements.darkMode = $('#dark-mode');
   elements.saveBtn = $('#save-btn');
 
   await loadAccountInfo();
@@ -93,6 +97,7 @@ async function loadSettings() {
   elements.badgeEnabled.checked = settings.badgeEnabled;
   elements.markAsReadOnOpen.checked = settings.markAsReadOnOpen;
   elements.alwaysPopOut.checked = settings.alwaysPopOut;
+  elements.darkMode.checked = settings.darkMode;
 }
 
 function bindEvents() {
@@ -176,10 +181,14 @@ async function handleSave() {
       notificationsEnabled: elements.notificationsEnabled.checked,
       badgeEnabled: elements.badgeEnabled.checked,
       markAsReadOnOpen: elements.markAsReadOnOpen.checked,
-      alwaysPopOut: elements.alwaysPopOut.checked
+      alwaysPopOut: elements.alwaysPopOut.checked,
+      darkMode: elements.darkMode.checked
     };
 
     await saveSettings(newSettings);
+
+    // Apply theme immediately after save
+    applyTheme(newSettings.darkMode);
 
     // Apply message limit immediately
     await applyMessageLimit();

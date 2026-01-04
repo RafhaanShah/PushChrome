@@ -3,6 +3,7 @@ import { login, registerDevice } from '../lib/api.js';
 import { saveSession, isLoggedIn, getPendingLogin, savePendingLogin, clearPendingLogin, getPendingEmail, savePendingEmail, clearPendingEmail } from '../lib/storage.js';
 import { generateDeviceName, $ } from '../lib/utils.js';
 import { Page, navigateTo, initWindowMode } from '../lib/navigation.js';
+import { initTheme } from '../lib/theme.js';
 
 const elements = {
   form: null,
@@ -22,6 +23,7 @@ let pendingLoginResult = null;
 
 async function init() {
   console.info('Login page initialized');
+  await initTheme();
   await initWindowMode(Page.LOGIN, true);
   elements.form = $('#login-form');
   elements.credentialsSection = $('#credentials-section');

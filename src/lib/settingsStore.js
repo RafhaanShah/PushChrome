@@ -12,7 +12,8 @@ export const DEFAULT_SETTINGS = {
   badgeEnabled: true,
   maxMessages: 100,
   markAsReadOnOpen: true,
-  alwaysPopOut: false
+  alwaysPopOut: false,
+  darkMode: false
 };
 
 export async function getSettings() {

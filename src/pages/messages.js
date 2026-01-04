@@ -5,6 +5,7 @@ import * as api from '../lib/api.js';
 import { $, debounce, escapeHtml, formatRelativeTime, getPriorityClass, getPriorityLabel, linkifyText } from '../lib/utils.js';
 import { Page, navigateTo, initWindowMode } from '../lib/navigation.js';
 import { initHeader, ICONS } from '../lib/header.js';
+import { initTheme } from '../lib/theme.js';
 
 let isRefreshing = false;
 let settings = null;
@@ -19,6 +20,7 @@ let currentSearchTerm = '';
 
 async function init() {
   console.info('Messages page initialized');
+  await initTheme();
   await initWindowMode(Page.MESSAGES);
 
   headerController = initHeader({

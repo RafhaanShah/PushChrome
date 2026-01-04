@@ -3,9 +3,11 @@
 
 import * as storage from '../lib/storage.js';
 import { Page, navigateTo } from '../lib/navigation.js';
+import { initTheme } from '../lib/theme.js';
 
 async function init() {
   console.info('Root page initialized');
+  await initTheme();
   const loggedIn = await storage.isLoggedIn();
   
   if (loggedIn) {
