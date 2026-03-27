@@ -60,7 +60,8 @@ const STORAGE_KEYS = {
   DEVICES: 'devices',
   SEND_PREFERENCES: 'sendPreferences',
   ERROR_STATE: 'errorState',
-  SCROLL_POSITION: 'scrollPosition'
+  SCROLL_POSITION: 'scrollPosition',
+  SOUNDS_CACHE: 'soundsCache'
 };
 
 // =============================================================================
@@ -202,6 +203,27 @@ export async function getScrollPosition(maxAgeSeconds = 600) {
 export async function saveScrollPosition(position) {
   await chrome.storage.local.set({ 
     [STORAGE_KEYS.SCROLL_POSITION]: { position, timestamp: Date.now() } 
+  });
+}
+
+// =============================================================================
+// Sounds Cache (chrome.storage.local - cached API sound list)
+// =============================================================================
+
+const SOUNDS_CACHE_MAX_AGE = 10 * 60 * 1000; // 10 minutes
+
+export async function getCachedSounds(token) {
+  const result = await chrome.storage.local.get(STORAGE_KEYS.SOUNDS_CACHE);
+  const entry = result[STORAGE_KEYS.SOUNDS_CACHE];
+  if (entry && entry.token === token && (Date.now() - entry.timestamp) < SOUNDS_CACHE_MAX_AGE) {
+    return entry.sounds;
+  }
+  return null;
+}
+
+export async function saveCachedSounds(token, sounds) {
+  await chrome.storage.local.set({
+    [STORAGE_KEYS.SOUNDS_CACHE]: { sounds, token, timestamp: Date.now() }
   });
 }
 

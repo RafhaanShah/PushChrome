@@ -334,6 +334,11 @@ export function getSoundUrl(soundName) {
   return `https://api.pushover.net/sounds/${soundName}.mp3`;
 }
 
+export async function fetchSounds(token) {
+  const { data } = await apiRequest(`/sounds.json?token=${encodeURIComponent(token)}`);
+  return data.sounds || {};
+}
+
 // =============================================================================
 // WebSocket API (for real-time message notification)
 // =============================================================================

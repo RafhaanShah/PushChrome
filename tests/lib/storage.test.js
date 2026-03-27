@@ -307,6 +307,48 @@ describe('scrollPosition', () => {
 });
 
 // =============================================================================
+// Sounds Cache
+// =============================================================================
+
+describe('soundsCache', () => {
+  beforeEach(() => clearStores());
+
+  it('getCachedSounds returns null when nothing cached', async () => {
+    assert.equal(await storage.getCachedSounds('tok123'), null);
+  });
+
+  it('saveCachedSounds + getCachedSounds round-trips', async () => {
+    const sounds = { pushover: 'Pushover (default)', bike: 'Bike' };
+    await storage.saveCachedSounds('tok123', sounds);
+    assert.deepEqual(await storage.getCachedSounds('tok123'), sounds);
+  });
+
+  it('returns null when cached with a different token', async () => {
+    await storage.saveCachedSounds('tok123', { pushover: 'Pushover' });
+    assert.equal(await storage.getCachedSounds('tok456'), null);
+  });
+
+  it('returns null when cache is expired (>10 minutes)', async () => {
+    localStore.soundsCache = {
+      sounds: { pushover: 'Pushover' },
+      token: 'tok123',
+      timestamp: Date.now() - (11 * 60 * 1000)
+    };
+    assert.equal(await storage.getCachedSounds('tok123'), null);
+  });
+
+  it('returns sounds when cache is fresh (<10 minutes)', async () => {
+    const sounds = { pushover: 'Pushover' };
+    localStore.soundsCache = {
+      sounds,
+      token: 'tok123',
+      timestamp: Date.now() - (5 * 60 * 1000)
+    };
+    assert.deepEqual(await storage.getCachedSounds('tok123'), sounds);
+  });
+});
+
+// =============================================================================
 // clearAll
 // =============================================================================
 

@@ -1,5 +1,6 @@
 // Pushover Chrome Extension - Send Message Page
-import { getSettings, getDevices, getSendPreferences, saveSendPreferences } from '../lib/storage.js';
+import { getSettings, getDevices, getSendPreferences, saveSendPreferences, getCachedSounds, saveCachedSounds } from '../lib/storage.js';
+import { fetchSounds } from '../lib/api.js';
 import { $, createElement } from '../lib/utils.js';
 import { initWindowMode, isPopupMode, openPageInWindow } from '../lib/navigation.js';
 import { initHeader, Page } from '../lib/header.js';
@@ -85,6 +86,7 @@ async function init() {
 
   await loadSettings();
   await loadDevices();
+  await loadSounds();
   await loadSendPreferences();
   bindEvents();
 }
@@ -105,6 +107,27 @@ async function loadDevices() {
   devices.forEach(device => {
     elements.device.appendChild(createElement('option', { value: device, textContent: device }));
   });
+}
+
+async function loadSounds() {
+  if (!settings.apiToken) return;
+
+  elements.sound.options[0].textContent = 'Default (loading…)';
+
+  try {
+    let sounds = await getCachedSounds(settings.apiToken);
+    if (!sounds) {
+      sounds = await fetchSounds(settings.apiToken);
+      await saveCachedSounds(settings.apiToken, sounds);
+    }
+    for (const [key, label] of Object.entries(sounds)) {
+      elements.sound.appendChild(createElement('option', { value: key, textContent: label }));
+    }
+  } catch (error) {
+    console.warn('Failed to fetch sounds from API:', error.message);
+  } finally {
+    elements.sound.options[0].textContent = 'Default';
+  }
 }
 
 async function loadSendPreferences() {
