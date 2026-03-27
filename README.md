@@ -2,6 +2,12 @@
 
 An unofficial [Pushover](https://pushover.net) browser extension — receive, view, and send push notifications directly from your browser.
 
+<p>
+  <img src="assets/send.png" alt="Send message" width="380">
+  &nbsp;&nbsp;
+  <img src="assets/messages.png" alt="Message list" width="380">
+</p>
+
 ## Features
 
 - **Receive Messages** — Real-time message delivery via WebSocket streaming or configurable polling intervals
@@ -13,15 +19,14 @@ An unofficial [Pushover](https://pushover.net) browser extension — receive, vi
 - **Offline Message Cache** — Messages are stored locally
 - **Unread Tracking** — Badge count and visual indicators for unread messages
 - **2FA Support** — Full two-factor authentication support during login
-- **No Build Step** — Pure vanilla JS, ships source directly with zero dependencies
 
 ## How It Works
 
 PushChrome uses two Pushover APIs:
 
-1. **[Open Client API](https://pushover.net/api/client)** — For receiving messages. Requires a Pushover Desktop license. The extension logs in with your email/password, registers a device, then fetches messages. Messages are deleted from Pushover's servers after retrieval and cached locally in `chrome.storage`.
+1. **[Open Client API](https://pushover.net/api/client)** — For receiving messages. Requires a Pushover license. The extension logs in with your email/password, registers a device, then fetches messages. Messages are deleted from Pushover's servers after retrieval and cached locally in `chrome.storage`.
 
-2. **[Message API](https://pushover.net/api)** — For sending messages. Requires an application API token and your user key. No desktop license needed.
+2. **[Message API](https://pushover.net/api)** — For sending messages. Requires an application API token and your user key. No license needed.
 
 ### Operating Modes
 
@@ -110,6 +115,19 @@ node --import ./tests/loader.js --test tests/lib/*.test.js
 
 - [Pushover Message API](https://pushover.net/api) — Sending messages
 - [Pushover Open Client API](https://pushover.net/api/client) — Receiving messages, device registration, authentication
+
+## Security & Privacy
+
+PushChrome **never stores your password**. Your credentials are sent directly to the Pushover API over HTTPS and are not saved anywhere. After login, only a session secret and device ID are retained in `chrome.storage`. Logging out clears all stored data.
+
+The extension ships as unminified, readable source code with zero third-party dependencies.
+
+## Contributing
+
+Contributions are welcome! If you'd like to help improve PushChrome:
+
+- **Bug reports & feature requests:** [Open an issue](https://github.com/rafhaanshah/pushchrome/issues) with steps to reproduce, screenshots and logs, or a description of the desired behavior.
+- **Pull requests:** Fork the repo, create a branch, and submit a PR. Please keep changes focused and test your modifications and add logs / screenshots before submitting.
 
 ## License
 
