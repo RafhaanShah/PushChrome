@@ -15,7 +15,27 @@ export function setContextMenuCallbacks({ onRefreshMessages, onRefreshDevices, o
   sendMessageCallback = onSendMessage;
 }
 
+let buildPending = false;
+let buildInProgress = false;
+
 export async function buildContextMenus() {
+  if (buildInProgress) {
+    buildPending = true;
+    return;
+  }
+  buildInProgress = true;
+  try {
+    await _buildContextMenus();
+  } finally {
+    buildInProgress = false;
+    if (buildPending) {
+      buildPending = false;
+      await buildContextMenus();
+    }
+  }
+}
+
+async function _buildContextMenus() {
   await chrome.contextMenus.removeAll();
 
   const session = await getSession();
