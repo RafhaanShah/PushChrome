@@ -324,8 +324,6 @@ export async function validateCredentials(token, user) {
 // Utility Functions
 // =============================================================================
 
-// TODO: Implement icon caching using Cache API to reduce API calls
-// Icons should be cached locally per Pushover API guidelines (Step 11)
 export function getIconUrl(iconName) {
   if (!iconName) return null;
   return `https://api.pushover.net/icons/${iconName}.png`;

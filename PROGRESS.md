@@ -339,10 +339,11 @@ src/
 
 ---
 
-## Next Steps
+## Progress Summary
 
 | Step | Task | Status |
 |------|------|--------|
+| 1 | Update `manifest.json` | ✅ Done |
 | 2 | Create `lib/storage.js` | ✅ Done |
 | 3 | Create `lib/api.js` | ✅ Done |
 | 4 | Create `lib/utils.js` | ✅ Done |
@@ -357,7 +358,13 @@ src/
 | 9e | Mark as read control | ✅ Done |
 | 9f | WebSocket real-time connection | ✅ Done |
 | 9g | Add badge & notifications | ✅ Done (in Step 9) |
-| 10 | Polish UI & error handling | 🔲 Pending |
+| 10a | Code restructuring | ✅ Done |
+| 10b | Icon caching | ✅ Done |
+| 10c | Robust error handling | ✅ Done |
+| 10d | Dark mode (system/light/dark) | ✅ Done |
+| 10e | Send-only mode | ✅ Done |
+| 10f | Pop-out mode | ✅ Done |
+| 10g | Login email persistence | ✅ Done |
 | 11 | Testing & bug fixes | 🔲 Pending |
 
 ---
@@ -397,9 +404,11 @@ Right-click on selection → "Send 'text...' to Pushover" → [All devices, Devi
 
 ## Notes
 
-- Extension can now be loaded in Chrome via `chrome://extensions/` → "Load unpacked"
-- Icons are currently using a single placeholder image for all sizes
-- Common CSS includes basic button styles, form elements, and utility classes
+- Extension can be loaded in Chrome via `chrome://extensions/` → "Load unpacked"
+- Icons available in 16, 32, 48, 128, and 512px sizes
+- Common CSS includes base styles, buttons, forms, banners, states, and dark mode via CSS custom properties
+- Service worker is split into focused modules imported by `service-worker.js`
+- Tests located in `tests/lib/` (messageStore unit tests)
 
 ### Step 9c: Device Refresh ✅
 **Completed:** 2024-12-25
@@ -565,10 +574,98 @@ Right-click on selection → "Send 'text...' to Pushover" → [All devices, Devi
 
 ---
 
-## Deferred Tasks (for Step 11 - Polish)
+## Deferred Tasks (for Step 10 - Polish)
 
 - [x] **Icon caching**: Implement Cache API caching for Pushover app icons per API guidelines
 - [x] **Robust error handling**: Credential validation, error states, warning badge, OS notifications
-- [ ] **Dark mode theme**: System preference detection, settings toggle, CSS custom properties
-- [X] **Send-only mode**: Allow sending messages without login/device registration (no desktop license needed)
-- [X] **Pop-out mode**: Open message list in standalone resizable window
+- [x] **Dark mode theme**: System/Light/Dark selector, `prefers-color-scheme` detection, CSS custom properties
+- [x] **Send-only mode**: Allow sending messages without login/device registration (no desktop license needed)
+- [x] **Pop-out mode**: Open message list in standalone resizable window
+- [x] **Login email persistence**: Store typed email in `chrome.storage.session` for popup close/reopen
+- [x] **Code restructuring**: Extracted shared modules (`header.js`, `navigation.js`, `theme.js`, `settingsStore.js`, `messageStore.js`), split service worker into focused modules (`alarms.js`, `badge.js`, `context-menus.js`, `icon-cache.js`, `message-sync.js`, `notifications.js`, `send-message.js`, `websocket.js`), added offscreen document for clipboard support, replaced popup with SPA-style root page routing
+
+---
+
+### Step 10a: Code Restructuring ✅
+
+**New shared libraries:**
+- `src/lib/header.js` - Reusable header component with navigation, pop-out button
+- `src/lib/navigation.js` - SPA-style page routing, window mode management
+- `src/lib/theme.js` - Dark mode with system preference detection
+- `src/lib/settingsStore.js` - Settings storage extracted from `storage.js`
+- `src/lib/messageStore.js` - Message storage extracted from `storage.js`
+
+**Service worker split into modules:**
+- `src/background/alarms.js` - Alarm management
+- `src/background/badge.js` - Badge updates
+- `src/background/context-menus.js` - Context menu creation and handling
+- `src/background/icon-cache.js` - Icon caching via Cache API
+- `src/background/message-sync.js` - Message fetch/sync logic
+- `src/background/notifications.js` - Chrome notification display
+- `src/background/send-message.js` - Message sending from background
+- `src/background/websocket.js` - WebSocket connection management
+
+**New pages:**
+- `src/pages/root.html` / `root.js` - Entry point router (replaces popup)
+- `src/pages/offscreen.html` / `offscreen.js` - Offscreen document for clipboard
+
+---
+
+### Step 10d: Dark Mode Theme ✅
+
+**Updated Files:**
+- `src/lib/theme.js` - System preference detection via `prefers-color-scheme`
+- `src/lib/settingsStore.js` - Changed `darkMode` default from `false` to `'system'`
+- `src/pages/settings.html` - 3-way Theme selector (System / Light / Dark)
+- `src/pages/settings.js` - Handles select value, migrates legacy boolean values
+
+**Features:**
+- **System mode** (default): Follows OS dark/light preference, live-updates on system change
+- **Light mode**: Forces light theme
+- **Dark mode**: Forces dark theme
+- **Legacy migration**: Old boolean `true`/`false` values auto-mapped to `'dark'`/`'light'`
+
+---
+
+### Step 10e: Send-Only Mode ✅
+
+**Updated Files:**
+- `src/lib/storage.js` - Added `isSendOnlyMode()` check
+- `src/pages/root.js` - Routes to Send page when in send-only mode
+- `src/pages/login.html` - Added link to settings for send-only setup
+- `src/pages/settings.js` - Hides receive-specific settings when not logged in
+
+**Features:**
+- **No login required**: Users can send messages with just API Token + User Key
+- **No desktop license needed**: Skips device registration entirely
+- **Direct routing**: Popup opens directly to Send page in send-only mode
+
+---
+
+### Step 10f: Pop-Out Mode ✅
+
+**Updated Files:**
+- `src/lib/navigation.js` - `openPageInWindow()` using `chrome.windows.create()`
+- `src/lib/header.js` - Pop-out button in header (shown in popup mode)
+- `src/background/context-menus.js` - "Pop-Out" option in browser action context menu
+- `src/lib/settingsStore.js` - `alwaysPopOut` setting
+- `src/pages/settings.html` - "Always open in a window" checkbox
+
+**Features:**
+- **Manual pop-out**: Button in header opens current page in standalone window
+- **Auto pop-out**: Optional "Always open in a window" setting
+- **Context menu**: Right-click extension icon → "Pop-Out"
+- **Larger window**: No max-width/max-height constraints in window mode
+
+---
+
+### Step 10g: Login Email Persistence ✅
+
+**Updated Files:**
+- `src/lib/storage.js` - `getPendingEmail()`, `savePendingEmail()`, `clearPendingEmail()`
+- `src/pages/login.js` - Pre-fills email on load, saves on input, clears on success
+
+**Features:**
+- **Session storage**: Email stored in `chrome.storage.session` (cleared on browser close)
+- **Auto-restore**: Email field pre-filled when returning to login page
+- **Live save**: Email saved on every keystroke for seamless popup close/reopen

@@ -97,7 +97,11 @@ async function loadSettings() {
   elements.badgeEnabled.checked = settings.badgeEnabled;
   elements.markAsReadOnOpen.checked = settings.markAsReadOnOpen;
   elements.alwaysPopOut.checked = settings.alwaysPopOut;
-  elements.darkMode.checked = settings.darkMode;
+  // Migrate legacy boolean values
+  let darkModeValue = settings.darkMode;
+  if (darkModeValue === true) darkModeValue = 'dark';
+  if (darkModeValue === false) darkModeValue = 'light';
+  elements.darkMode.value = darkModeValue;
 }
 
 function bindEvents() {
@@ -182,7 +186,7 @@ async function handleSave() {
       badgeEnabled: elements.badgeEnabled.checked,
       markAsReadOnOpen: elements.markAsReadOnOpen.checked,
       alwaysPopOut: elements.alwaysPopOut.checked,
-      darkMode: elements.darkMode.checked
+      darkMode: elements.darkMode.value
     };
 
     await saveSettings(newSettings);

@@ -13,7 +13,7 @@ export const DEFAULT_SETTINGS = {
   maxMessages: 100,
   markAsReadOnOpen: true,
   alwaysPopOut: false,
-  darkMode: false
+  darkMode: 'system'
 };
 
 export async function getSettings() {
