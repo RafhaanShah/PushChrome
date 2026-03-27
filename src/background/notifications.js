@@ -23,6 +23,11 @@ export async function showNotificationsForNewMessages(newCount) {
 }
 
 async function showNotification(message) {
+  // Lowest priority (-2): no notification at all, per Pushover spec
+  if (message.priority <= -2) {
+    return;
+  }
+
   const notificationId = `pushover-msg-${message.id}`;
   const fallbackIcon = chrome.runtime.getURL('src/icons/icon-128.png');
 
@@ -35,7 +40,10 @@ async function showNotification(message) {
     message: message.message || '',
     iconUrl,
     priority: getPriorityForNotification(message.priority),
-    requireInteraction: message.priority >= 2 // Emergency messages stay visible
+    // Low priority (-1): show notification but no sound/vibration
+    silent: message.priority === -1,
+    // Emergency priority (2): stay visible until user interacts
+    requireInteraction: message.priority >= 2
   };
 
   const isEmergency = message.priority === 2 && message.acked === 0 && message.receipt;
