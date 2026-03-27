@@ -392,4 +392,4 @@ export function createWebSocketConnection(deviceId, secret, handlers = {}) {
   return ws;
 }
 
-export { PushoverAPIError };
+export { PushoverAPIError, classifyError, formatErrors, encodeParams };
