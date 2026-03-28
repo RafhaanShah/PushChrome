@@ -32,12 +32,21 @@ jobs:
         git push origin HEAD:main
 
     - name: Zip extension
-      run: |
-        zip -r PushChrome-${{ steps.vars.outputs.tag }}.zip manifest.json src/
+      run: npm run zip
 
     - name: Upload extension zip
       uses: shogo82148/actions-upload-release-asset@v1
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: PushChrome-${{ steps.vars.outputs.tag }}.zip
+        asset_path: PushChrome.zip
         asset_name: PushChrome-${{ steps.vars.outputs.tag }}.zip
+
+    - name: Publish to Chrome Web Store
+      uses: mobilefirstllc/cws-publish@2.1.1
+      with:
+        action: 'publish'
+        client_id: ${{ secrets.CHROME_CLIENT_ID }}
+        client_secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+        refresh_token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        extension_id: ${{ secrets.CHROME_EXTENSION_ID }}
+        zip_file: PushChrome.zip

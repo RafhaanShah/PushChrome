@@ -2,6 +2,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --import ./tests/loader.js --test 'tests/**/*.test.js'"
+    "test": "node --import ./tests/loader.js --test 'tests/**/*.test.js'",
+    "zip": "zip -r PushChrome.zip manifest.json src/"
   }
 }
