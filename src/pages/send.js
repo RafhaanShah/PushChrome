@@ -1,6 +1,6 @@
 // Pushover Chrome Extension - Send Message Page
 import { getSettings, getDevices, getSendPreferences, saveSendPreferences, getCachedSounds, saveCachedSounds } from '../lib/storage.js';
-import { fetchSounds } from '../lib/api.js';
+import { fetchSounds, MESSAGE_LIMITS } from '../lib/api.js';
 import { $, createElement } from '../lib/utils.js';
 import { initWindowMode, isPopupMode, openPageInWindow } from '../lib/navigation.js';
 import { initHeader, Page } from '../lib/header.js';
@@ -36,12 +36,7 @@ const elements = {
   sendBtn: null
 };
 
-const LIMITS = {
-  message: 1024,
-  title: 250,
-  url: 512,
-  urlTitle: 100
-};
+const LIMITS = MESSAGE_LIMITS;
 
 let attachmentData = null; // { buffer: ArrayBuffer, type: string, name: string }
 

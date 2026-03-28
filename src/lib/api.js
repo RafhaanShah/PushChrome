@@ -3,6 +3,14 @@
 
 const API_BASE = 'https://api.pushover.net/1';
 
+// Pushover API field length limits
+export const MESSAGE_LIMITS = {
+  message: 1024,
+  title: 250,
+  url: 512,
+  urlTitle: 100
+};
+
 // Error types for classification
 export const ERROR_TYPES = {
   AUTH: 'auth',           // Invalid secret/credentials
@@ -255,12 +263,17 @@ export async function acknowledgeEmergency(secret, receiptId) {
 // Message API (for sending messages)
 // =============================================================================
 
+function truncate(str, maxLength) {
+  if (str.length <= maxLength) return str;
+  return str.slice(0, maxLength - 3) + '...';
+}
+
 export async function sendMessage({ token, user, message, title, device, priority, retry, expire, url, urlTitle, sound, attachmentBuffer, attachmentType }) {
   const formData = new FormData();
   formData.append('token', token);
   formData.append('user', user);
-  formData.append('message', message);
-  if (title) formData.append('title', title);
+  formData.append('message', truncate(message, MESSAGE_LIMITS.message));
+  if (title) formData.append('title', truncate(title, MESSAGE_LIMITS.title));
   if (device) formData.append('device', device);
   if (priority !== undefined) formData.append('priority', String(priority));
   if (priority === 2) {
@@ -268,7 +281,7 @@ export async function sendMessage({ token, user, message, title, device, priorit
     formData.append('expire', String(expire || 3600));
   }
   if (url) formData.append('url', url);
-  if (urlTitle) formData.append('url_title', urlTitle);
+  if (urlTitle) formData.append('url_title', truncate(urlTitle, MESSAGE_LIMITS.urlTitle));
   if (sound) formData.append('sound', sound);
 
   if (attachmentBuffer && attachmentType) {
