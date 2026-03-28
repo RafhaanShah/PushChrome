@@ -53,7 +53,7 @@ Messages can be delivered in two ways:
 
 To install it manually as an unpacked extension:
 
-1. Clone the repository / download the repository
+1. Download the `zip` from the [latest release](https://github.com/RafhaanShah/PushChrome/releases)
 2. Open the browser extension menu, e.g. `chrome://extensions`
 3. Enable **Developer mode** (toggle in the top-right corner)
 4. Click **Load unpacked** and select the cloned `PushChrome` directory
@@ -105,10 +105,9 @@ PushChrome/
 
 ## Testing
 
-Tests use the built-in Node.js test runner with a custom ESM loader to mock Chrome APIs:
 
 ```sh
-node --import ./tests/loader.js --test tests/lib/*.test.js
+npm test
 ```
 
 ## API Reference
