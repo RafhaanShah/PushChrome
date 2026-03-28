@@ -116,6 +116,18 @@ node --import ./tests/loader.js --test tests/lib/*.test.js
 - [Pushover Message API](https://pushover.net/api) — Sending messages
 - [Pushover Open Client API](https://pushover.net/api/client) — Receiving messages, device registration, authentication
 
+## Permissions
+
+| Permission | Reason |
+|---|---|
+| `storage` | Store session credentials, settings, and cached messages locally |
+| `alarms` | Schedule periodic message polling and WebSocket keepalive checks |
+| `notifications` | Show desktop notifications for incoming messages and errors |
+| `contextMenus` | Add right-click options to send page URLs or selected text to Pushover |
+| `offscreen` | Create an offscreen document for clipboard copy support |
+| `clipboardWrite` | Copy message content to clipboard |
+| `https://api.pushover.net/*` | Communicate with the Pushover API for login, sending, and receiving messages |
+
 ## Security & Privacy
 
 PushChrome **never stores your password**. Your credentials are sent directly to the Pushover API over HTTPS and are not saved anywhere. After login, only a session secret and device ID are retained in `chrome.storage`. Logging out clears all stored data.
