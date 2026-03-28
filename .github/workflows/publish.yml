@@ -1,0 +1,43 @@
+name: Publish Extension
+
+on:
+  release:
+    types: [ "published" ]
+
+jobs:
+  publish_to_release:
+    name: Publish Extension
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Set version variable
+      id: vars
+      run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Update manifest.json version
+      run: |
+        jq '.version = "${{ steps.vars.outputs.tag }}"' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+
+    - name: Commit version changes
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add manifest.json
+        git commit -m "Bump version to ${{ steps.vars.outputs.tag }}"
+        git push origin HEAD:main
+
+    - name: Zip extension
+      run: |
+        zip -r PushChrome-${{ steps.vars.outputs.tag }}.zip manifest.json src/
+
+    - name: Upload extension zip
+      uses: shogo82148/actions-upload-release-asset@v1
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: PushChrome-${{ steps.vars.outputs.tag }}.zip
+        asset_name: PushChrome-${{ steps.vars.outputs.tag }}.zip
