@@ -24,7 +24,7 @@ let pendingLoginResult = null;
 async function init() {
   console.info('Login page initialized');
   await initTheme();
-  await initWindowMode(Page.LOGIN, true);
+  initWindowMode();
   elements.form = $('#login-form');
   elements.credentialsSection = $('#credentials-section');
   elements.deviceSection = $('#device-section');

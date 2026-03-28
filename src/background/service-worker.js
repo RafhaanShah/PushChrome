@@ -1,9 +1,9 @@
 // Pushover Chrome Extension - Service Worker
 // Background script for handling alarms, notifications, and message sync
 
-import { purgeDeletedMessages, clearErrorState } from '../lib/storage.js';
+import { purgeDeletedMessages, clearErrorState, getSettings } from '../lib/storage.js';
 import { validateCredentials } from '../lib/api.js';
-import { Page, openPageInWindow } from '../lib/navigation.js';
+import { Page, getPagePath, openPageInWindow } from '../lib/navigation.js';
 import { cleanupIconCache } from './icon-cache.js';
 import { updateBadge } from './badge.js';
 import { setupAlarms, ALARM_NAMES } from './alarms.js';
@@ -12,6 +12,20 @@ import { setupNotificationListeners, handleAcknowledgeEmergency, clearAllMessage
 import { buildContextMenus, setupContextMenuListener, setContextMenuCallbacks } from './context-menus.js';
 import { refreshMessages, refreshDevices, setMessageSyncCallbacks } from './message-sync.js';
 import { handleSendMessage } from './send-message.js';
+
+// =============================================================================
+// Always-pop-out mode
+// =============================================================================
+
+async function syncPopupMode() {
+  const settings = await getSettings();
+  const defaultPopup = getPagePath(Page.ROOT);
+  await chrome.action.setPopup({ popup: settings.alwaysPopOut ? '' : defaultPopup });
+}
+
+chrome.action.onClicked.addListener(() => {
+  openPageInWindow(Page.ROOT);
+});
 
 // =============================================================================
 // Initialization
@@ -23,6 +37,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     openPageInWindow(Page.ROOT);
   }
 
+  await syncPopupMode();
   await setupAlarms();
   await purgeDeletedMessages();
   await updateBadge();
@@ -33,6 +48,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 chrome.runtime.onStartup.addListener(async () => {
   console.info('Browser started, initializing extension');
 
+  await syncPopupMode();
   await setupAlarms();
   await purgeDeletedMessages();
   await updateBadge();
@@ -99,6 +115,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   // Reconfigure alarms and WebSocket when settings change
   if (area === 'local' && changes.settings) {
     console.debug('Storage change detected: settings');
+    await syncPopupMode();
     await setupAlarms();
     // Connect or disconnect WebSocket based on new refresh interval setting
     await connectWebSocket(refreshMessages);

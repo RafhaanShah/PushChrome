@@ -18,6 +18,14 @@ const PAGE_PATHS = {
     [Page.OFFSCREEN]: 'offscreen.html',
 };
 
+function getPagePath(page) {
+    return `src/pages/${PAGE_PATHS[page]}`;
+}
+
+function getPageUrl(page) {
+    return chrome.runtime.getURL(getPagePath(page));
+}
+
 function navigateTo(page, options = {}) {
     console.debug('Navigating to page:', page);
     const { replace = false } = options;
@@ -34,16 +42,25 @@ function isPopupMode() {
     return chrome.extension.getViews({ type: 'popup' }).length > 0;
 }
 
-function openPageInWindow(page) {
+async function openPageInWindow(page) {
     console.debug('Opening page in window:', page);
-    const url = chrome.runtime.getURL(`src/pages/${PAGE_PATHS[page]}`);
-    openUrlInWindow(url);
+    const url = getPageUrl(page);
+    await openUrlInWindow(url);
 }
 
-function openUrlInWindow(url) {
-    console.debug('Opening URL in window:', url);
+async function openUrlInWindow(url) {
+    const contexts = await chrome.runtime.getContexts({
+        contextTypes: ['TAB']
+    });
+    const existing = contexts.find(c => c.documentUrl?.startsWith(chrome.runtime.getURL('')));
+    if (existing) {
+        console.debug('Focusing existing extension window:', existing.windowId);
+        await chrome.windows.update(existing.windowId, { focused: true });
+        return;
+    }
+
     console.info('Opening URL in window:', url);
-    chrome.windows.create({ url, type: 'popup' });
+    chrome.windows.create({ url, type: 'popup', width: 380, height: 720 });
 }
 
 function openUrlInTab(url) {
@@ -52,16 +69,10 @@ function openUrlInTab(url) {
     chrome.tabs.create({ url });
 }
 
-async function initWindowMode(page, force = false) {
+function initWindowMode() {
     const isWindow = !isPopupMode();
     if (isWindow) {
         document.body.classList.add('window-mode');
-        return; // already window mode
-    }
-
-    const pop = force || await storage.getSettings().alwaysPopOut;
-    if (pop) {
-        openPageInWindow(page);
     }
 }
 
@@ -72,7 +83,7 @@ async function createOffscreenDocument() {
 
     console.debug('Creating offscreen document');
     await chrome.offscreen.createDocument({
-        url: chrome.runtime.getURL(`src/pages/${PAGE_PATHS[Page.OFFSCREEN]}`),
+        url: getPageUrl(Page.OFFSCREEN),
         reasons: ['CLIPBOARD'],
         justification: 'Copy notification message to clipboard'
     });
@@ -115,6 +126,7 @@ async function isPageOpen(page) {
 
 export {
     Page,
+    getPagePath,
     navigateTo,
     isPopupMode,
     openPageInWindow,

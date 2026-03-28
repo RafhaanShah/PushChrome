@@ -50,7 +50,7 @@ let settings = null;
 async function init() {
   console.info('Send page initialized');
   await initTheme();
-  await initWindowMode(Page.SEND);
+  initWindowMode();
   initHeader({
     title: 'Send Message',
     currentPage: Page.SEND,

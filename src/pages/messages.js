@@ -21,7 +21,7 @@ let currentSearchTerm = '';
 async function init() {
   console.info('Messages page initialized');
   await initTheme();
-  await initWindowMode(Page.MESSAGES);
+  initWindowMode();
 
   headerController = initHeader({
     title: 'PushChrome',

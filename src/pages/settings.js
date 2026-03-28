@@ -33,7 +33,7 @@ const elements = {
 async function init() {
   console.info('Settings page initialized');
   await initTheme();
-  await initWindowMode(Page.SETTINGS);
+  initWindowMode();
   initHeader({
     title: 'Settings',
     currentPage: Page.SETTINGS,
