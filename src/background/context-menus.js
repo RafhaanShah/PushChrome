@@ -43,15 +43,6 @@ async function _buildContextMenus() {
   const devices = await getDevices();
 
   // Browser action context menu items (right-click on extension icon)
-  // Only show pop-out option if alwaysPopOut is not enabled
-  if (!settings.alwaysPopOut) {
-    chrome.contextMenus.create({
-      id: 'pop-out',
-      title: 'Pop-Out',
-      contexts: ['action']
-    });
-  }
-  
   if (session?.secret && session?.deviceId) {
     chrome.contextMenus.create({
       id: 'mark-all-read',
@@ -59,16 +50,33 @@ async function _buildContextMenus() {
       contexts: ['action']
     });
     chrome.contextMenus.create({
-      id: 'refresh-messages',
-      title: 'Refresh Messages',
+      id: 'refresh',
+      title: 'Refresh',
+      contexts: ['action']
+    });
+  }
+
+  const hasActions = session?.secret && session?.deviceId;
+  if (hasActions) {
+    chrome.contextMenus.create({
+      id: 'separator-pages',
+      type: 'separator',
+      contexts: ['action']
+    });
+  }
+
+  if (session?.secret && session?.deviceId) {
+    chrome.contextMenus.create({
+      id: 'open-messages',
+      title: 'Messages',
       contexts: ['action']
     });
   }
 
   if (settings.apiToken && settings.userKey) {
     chrome.contextMenus.create({
-      id: 'refresh-devices',
-      title: 'Refresh Devices',
+      id: 'open-send',
+      title: 'Send',
       contexts: ['action']
     });
   }
@@ -153,24 +161,19 @@ export function setupContextMenuListener() {
     console.info('Context menu item clicked:', menuId);
 
     // Handle browser action context menu items
-    if (menuId === 'refresh-messages') {
-      console.debug('Manual message refresh triggered from context menu');
+    if (menuId === 'refresh') {
+      console.debug('Manual refresh triggered from context menu');
       await showRefreshingBadge();
-      const result = refreshMessagesCallback ? await refreshMessagesCallback() : { error: 'No callback' };
+      const results = await Promise.all([
+        refreshMessagesCallback ? refreshMessagesCallback() : { error: 'No callback' },
+        refreshDevicesCallback ? refreshDevicesCallback() : { success: true }
+      ]);
       await updateBadge();
-      if (result.error && result.error !== 'not_logged_in') {
-        showToastNotification('Refresh Failed', result.error);
-      }
-      return;
-    }
-
-    if (menuId === 'refresh-devices') {
-      console.debug('Manual device refresh triggered from context menu');
-      await showRefreshingBadge();
-      const result = refreshDevicesCallback ? await refreshDevicesCallback() : { success: false, error: 'No callback' };
-      await updateBadge();
-      if (!result.success) {
-        showToastNotification('Refresh Failed', result.error || 'Unknown error');
+      const [msgResult, devResult] = results;
+      if (msgResult.error && msgResult.error !== 'not_logged_in') {
+        showToastNotification('Refresh Failed', msgResult.error);
+      } else if (!devResult.success) {
+        showToastNotification('Refresh Failed', devResult.error || 'Unknown error');
       }
       return;
     }
@@ -183,15 +186,21 @@ export function setupContextMenuListener() {
       return;
     }
 
-    if (menuId === 'pop-out') {
-      console.debug('Pop-out triggered from context menu');
-      openPageInWindow(Page.ROOT);
+    if (menuId === 'open-messages') {
+      console.debug('Messages triggered from context menu');
+      openPageInWindow(Page.MESSAGES);
+      return;
+    }
+
+    if (menuId === 'open-send') {
+      console.debug('Send triggered from context menu');
+      openPageInWindow(Page.SEND);
       return;
     }
 
     if (menuId === 'open-settings') {
       console.debug('Settings triggered from context menu');
-      chrome.windows.create({ url: chrome.runtime.getURL('src/pages/settings.html'), type: 'popup' });
+      openPageInWindow(Page.SETTINGS);
       return;
     }
 
