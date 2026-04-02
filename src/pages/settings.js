@@ -1,5 +1,5 @@
 // Pushover Chrome Extension - Settings Page
-import { getSession, getSettings, saveSettings, saveDevices, clearAll, applyMessageLimit } from '../lib/storage.js';
+import { getSession, saveSession, getSettings, saveSettings, getDevices, saveDevices, clearAll, applyMessageLimit } from '../lib/storage.js';
 import { $ } from '../lib/utils.js';
 import { Page, navigateTo, initWindowMode } from '../lib/navigation.js';
 import { initHeader } from '../lib/header.js';
@@ -39,6 +39,11 @@ async function init() {
     currentPage: Page.SETTINGS,
   });
   elements.deviceName = $('#device-name');
+  elements.updateDeviceNameBtn = $('#update-device-name-btn');
+  elements.deviceNamePicker = $('#device-name-picker');
+  elements.deviceNameSelect = $('#device-name-select');
+  elements.deviceNameSaveBtn = $('#device-name-save-btn');
+  elements.deviceNameCancelBtn = $('#device-name-cancel-btn');
   elements.userId = $('#user-id');
   elements.logoutBtn = $('#logout-btn');
   elements.loginPrompt = $('#login-prompt');
@@ -74,6 +79,12 @@ async function loadAccountInfo() {
     elements.userId.textContent = session.userId || '-';
     elements.userKey.value = session.userId;
     elements.logoutBtn.classList.remove('hidden');
+
+    // Check if the stored device name is still in the known device list
+    const devices = await getDevices();
+    if (session.deviceName && devices.length > 0 && !devices.includes(session.deviceName)) {
+      elements.updateDeviceNameBtn.classList.remove('hidden');
+    }
   } else {
     isLoggedIn = false;
     elements.userKeyGroup.classList.remove('hidden');
@@ -112,6 +123,47 @@ function bindEvents() {
   elements.maxMessages.addEventListener('input', () => {
     elements.maxMessagesValue.textContent = elements.maxMessages.value;
   });
+  elements.updateDeviceNameBtn.addEventListener('click', handleShowDeviceNamePicker);
+  elements.deviceNameSaveBtn.addEventListener('click', handleDeviceNameSave);
+  elements.deviceNameCancelBtn.addEventListener('click', handleDeviceNameCancel);
+  elements.deviceNameSelect.addEventListener('change', () => {
+    elements.deviceNameSaveBtn.disabled = !elements.deviceNameSelect.value;
+  });
+}
+
+async function handleShowDeviceNamePicker() {
+  const devices = await getDevices();
+  const select = elements.deviceNameSelect;
+
+  // Reset and populate options
+  select.innerHTML = '<option value="">Select a device…</option>';
+  for (const name of devices) {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    select.appendChild(option);
+  }
+
+  elements.deviceNameSaveBtn.disabled = true;
+  elements.updateDeviceNameBtn.classList.add('hidden');
+  elements.deviceNamePicker.classList.remove('hidden');
+}
+
+async function handleDeviceNameSave() {
+  const newName = elements.deviceNameSelect.value;
+  if (!newName) return;
+
+  const session = await getSession();
+  session.deviceName = newName;
+  await saveSession(session);
+
+  elements.deviceName.textContent = newName;
+  elements.deviceNamePicker.classList.add('hidden');
+}
+
+function handleDeviceNameCancel() {
+  elements.deviceNamePicker.classList.add('hidden');
+  elements.updateDeviceNameBtn.classList.remove('hidden');
 }
 
 async function handleLogout() {

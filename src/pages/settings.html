@@ -20,7 +20,23 @@
         <div class="account-info">
           <div class="account-row">
             <span class="account-label">Device</span>
-            <span id="device-name" class="account-value">-</span>
+            <span class="account-value-group">
+              <span id="device-name" class="account-value">-</span>
+              <button id="update-device-name-btn" class="btn btn-small btn-secondary hidden" title="Device name not found in your account devices">
+                Update
+              </button>
+            </span>
+          </div>
+          <div id="device-name-picker" class="device-name-picker hidden">
+            <p class="hint">Your device name was not found in your account's device list. It may have been renamed on <a href="https://pushover.net" target="_blank" rel="noopener">pushover.net</a>. Select the correct device below.</p>
+            <p class="hint hint-muted">This only updates the display name locally.</p>
+            <select id="device-name-select">
+              <option value="">Select a device…</option>
+            </select>
+            <div class="device-name-picker-actions">
+              <button id="device-name-save-btn" class="btn btn-small btn-primary" disabled>Save</button>
+              <button id="device-name-cancel-btn" class="btn btn-small btn-secondary">Cancel</button>
+            </div>
           </div>
           <div class="account-row">
             <span class="account-label">User ID</span>

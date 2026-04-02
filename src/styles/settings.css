@@ -35,6 +35,36 @@
   word-break: break-all;
 }
 
+/* Device Name Picker */
+.account-value-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.device-name-picker {
+  padding: 8px 0 4px;
+  border-top: 1px solid var(--color-border);
+  margin-top: 8px;
+}
+
+.device-name-picker .hint-muted {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+.device-name-picker select {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.device-name-picker-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
 /* Validate Result */
 .validate-result {
   margin-top: 12px;
