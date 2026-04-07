@@ -51,7 +51,7 @@ Messages can be delivered in two ways:
 
 ## Installation
 
-[<img src="https://developer.chrome.com/static/docs/webstore/branding/image/206x58-chrome-web-bcb82d15b2486.png">]([https://link-to-your-URL/](https://chromewebstore.google.com/detail/pushchrome/fbkhhdgdjaklianangpcfmeplipeepnj)
+[<img src="https://developer.chrome.com/static/docs/webstore/branding/image/206x58-chrome-web-bcb82d15b2486.png">](https://chromewebstore.google.com/detail/pushchrome/fbkhhdgdjaklianangpcfmeplipeepnj)
 
 To install it manually as an unpacked extension:
 
