@@ -16,7 +16,7 @@ jobs:
       id: vars
       run: |
         echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
-        echo "output_file="${{ github.event.repository.name }}-${GITHUB_REF#refs/*/}.zip" >> $GITHUB_OUTPUT
+        echo "output_file=${{ github.event.repository.name }}-${GITHUB_REF#refs/*/}.zip" >> $GITHUB_OUTPUT
 
     - name: Checkout
       uses: actions/checkout@v6
