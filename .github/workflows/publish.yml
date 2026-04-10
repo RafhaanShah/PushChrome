@@ -14,7 +14,9 @@ jobs:
     steps:
     - name: Set version variable
       id: vars
-      run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+      run: |
+        echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+        echo "output_file="${{ github.event.repository.name }}-${GITHUB_REF#refs/*/}.zip" >> $GITHUB_OUTPUT
 
     - name: Checkout
       uses: actions/checkout@v6
@@ -30,13 +32,13 @@ jobs:
       run: |
         REPO_NAME="${{ github.event.repository.name }}"
         TAG="${{ steps.vars.outputs.tag }}"
-        mv "${REPO_NAME}.zip" "${REPO_NAME}-${TAG}.apk"
+        mv "${REPO_NAME}.zip" "${{ steps.vars.outputs.output_file }}"
 
     - name: Upload Zip
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ github.event.release.tag_name }}
-        files: "*.zip"
+        files: ${{ steps.vars.outputs.output_file }}
         append_body: true
         generate_release_notes: true
       env:
@@ -50,7 +52,7 @@ jobs:
         client_secret: ${{ secrets.CHROME_CLIENT_SECRET }}
         refresh_token: ${{ secrets.CHROME_REFRESH_TOKEN }}
         extension_id: ${{ secrets.CHROME_EXTENSION_ID }}
-        zip_file: PushChrome.zip
+        zip_file: ${{ steps.vars.outputs.output_file }}
 
     - name: Commit version changes
       run: |
