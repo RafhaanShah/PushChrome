@@ -1,10 +1,9 @@
 {
   "manifest_version": 3,
   "name": "PushChrome",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minimum_chrome_version": "116",
   "description": "Unofficial Pushover Browser Extension - view, send, and receive messages directly from your browser.",
-
   "permissions": [
     "storage",
     "alarms",
@@ -13,16 +12,13 @@
     "offscreen",
     "clipboardWrite"
   ],
-
   "host_permissions": [
     "https://api.pushover.net/*"
   ],
-
   "background": {
     "service_worker": "src/background/service-worker.js",
     "type": "module"
   },
-
   "action": {
     "default_popup": "src/pages/root.html",
     "default_icon": {
@@ -32,12 +28,10 @@
       "128": "src/icons/icon-128.png"
     }
   },
-
   "options_ui": {
     "page": "src/pages/settings.html",
     "open_in_tab": false
   },
-
   "icons": {
     "16": "src/icons/icon-16.png",
     "32": "src/icons/icon-32.png",
