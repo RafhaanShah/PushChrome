@@ -349,6 +349,7 @@ function createMessageElement(msg, isUnread) {
       <div class="message-time-container">
         <div class="message-time" title="${new Date(msg.date * 1000).toLocaleString()}">${timeText}</div>
       </div>
+      ${isUnread ? '<button class="message-mark-read" title="Mark as read">✅</button>' : ''}
       <button class="message-copy" title="Copy message">📋</button>
       <button class="message-delete" title="Delete message">🗑️</button>
     </div>
@@ -360,6 +361,16 @@ function createMessageElement(msg, isUnread) {
     ${urlHtml}
     ${emergencyHtml}
   `;
+
+  const markReadBtn = $('.message-mark-read', div);
+  if (markReadBtn) {
+    markReadBtn.addEventListener('click', async () => {
+      await storage.markMessageRead(msg.id);
+      div.classList.remove('unread');
+      markReadBtn.remove();
+      await updateBadge();
+    });
+  }
 
   $('.message-copy', div).addEventListener('click', async () => {
     await copyMessage(msg, $('.message-copy', div));
@@ -374,6 +385,17 @@ function createMessageElement(msg, isUnread) {
       await acknowledgeMessage(msg.receipt, msg.id, e.target);
     });
   }
+
+  // Mark as read when any link in the message is clicked
+  div.addEventListener('click', async (e) => {
+    const link = e.target.closest('a');
+    if (link && div.classList.contains('unread')) {
+      await storage.markMessageRead(msg.id);
+      div.classList.remove('unread');
+      $('.message-mark-read', div)?.remove();
+      await updateBadge();
+    }
+  });
 
   return div;
 }

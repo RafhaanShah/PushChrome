@@ -244,6 +244,7 @@ body.dark-mode .priority-badge.priority-emergency {
   opacity: 0;
 }
 
+.message-mark-read,
 .message-copy,
 .message-delete {
   position: absolute;
@@ -264,6 +265,10 @@ body.dark-mode .priority-badge.priority-emergency {
   font-size: 12px;
 }
 
+.message-mark-read {
+  right: 66px;
+}
+
 .message-copy {
   right: 38px;
 }
@@ -272,9 +277,16 @@ body.dark-mode .priority-badge.priority-emergency {
   right: 10px;
 }
 
+.message-item:hover .message-mark-read,
 .message-item:hover .message-copy,
 .message-item:hover .message-delete {
   opacity: 1;
+}
+
+.message-mark-read:hover {
+  background: var(--color-info-bg);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .message-copy:hover {

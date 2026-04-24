@@ -19,6 +19,7 @@ import {
   appendMessages,
   applyMessageLimit,
   getUnreadCount,
+  markMessageRead,
   markAllRead,
   purgeDeletedMessages,
   deleteDatabase as deleteMessageDatabase
@@ -46,6 +47,7 @@ export {
   appendMessages,
   applyMessageLimit,
   getUnreadCount,
+  markMessageRead,
   markAllRead,
   purgeDeletedMessages,
   deleteMessageDatabase,

@@ -259,6 +259,14 @@ export async function getUnreadCount() {
   return messages.filter(m => !m._seen).length;
 }
 
+export async function markMessageRead(messageId) {
+  const message = await getMessage(messageId);
+  if (message && !message._seen) {
+    message._seen = true;
+    await putMessage(message);
+  }
+}
+
 export async function markAllRead() {
   const settings = await getSettings();
   const messages = await getMessages();
