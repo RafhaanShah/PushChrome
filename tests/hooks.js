@@ -16,6 +16,7 @@ export async function clearMessages() {}
 export async function appendMessages() { return 0; }
 export async function applyMessageLimit() { return 0; }
 export async function getUnreadCount() { return 0; }
+export async function markMessageRead() {}
 export async function markAllRead() {}
 export async function purgeDeletedMessages() { return 0; }
 export async function closeDatabase() {}
