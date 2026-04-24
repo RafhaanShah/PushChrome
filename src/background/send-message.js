@@ -44,7 +44,7 @@ async function notifySendResult(result, device) {
   if (await isPageOpen(Page.SEND)) return;
 
   if (result.success) {
-    showToastNotification('Message Sent', `Sent to ${device || 'all devices'}`);
+    showToastNotification('Message Sent', `Sent to ${device || 'all devices'}`, { silent: true });
     return;
   }
 

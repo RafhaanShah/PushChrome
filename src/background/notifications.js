@@ -146,7 +146,7 @@ export async function clearAllMessageNotifications() {
   }
 }
 
-export function showToastNotification(title, message) {
+export function showToastNotification(title, message, { silent = false } = {}) {
   const notificationId = `pushover-toast-${Date.now()}`;
 
   chrome.notifications.create(notificationId, {
@@ -154,7 +154,8 @@ export function showToastNotification(title, message) {
     iconUrl: chrome.runtime.getURL('src/icons/icon-128.png'),
     title: title,
     message: message,
-    priority: 0
+    priority: 0,
+    silent: silent
   });
 
   // Auto-dismiss after 5 seconds
